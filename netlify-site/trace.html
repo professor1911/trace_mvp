@@ -4,133 +4,77 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rice Trace — Farm to Pack</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root{
-    --ink:#16241C;
-    --paddy:#3B6E4E;
-    --paddy-deep:#254B33;
-    --husk:#C79A3D;
-    --husk-soft:#E9D9AE;
-    --parchment:#F6F2E6;
-    --paper:#FFFDF8;
-    --soil:#6B4A2F;
-    --line:#DCD3BE;
-    --ok:#3B6E4E;
+    --ink:#16241C; --paddy:#3B6E4E; --paddy-deep:#254B33; --husk:#C79A3D; --husk-soft:#E9D9AE;
+    --parchment:#F6F2E6; --paper:#FFFDF8; --soil:#6B4A2F; --line:#DCD3BE;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{
-    background:var(--parchment);
-    color:var(--ink);
-    font-family:'IBM Plex Sans', sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  .app{ max-width:460px; margin:0 auto; min-height:100vh; background:var(--paper); position:relative; }
+  body{ background:var(--parchment); color:var(--ink); font-family:'IBM Plex Sans', sans-serif; -webkit-font-smoothing:antialiased; }
+  .app{ max-width:480px; margin:0 auto; min-height:100vh; background:var(--paper); }
+  a.scan-link{ color:inherit; }
 
-  /* ---------- Hero ---------- */
-  .hero{
-    background:linear-gradient(180deg, var(--paddy-deep) 0%, var(--paddy) 100%);
-    color:var(--paper);
-    padding:28px 24px 40px;
-    position:relative;
-    overflow:hidden;
-  }
-  .hero::after{
-    content:"";
-    position:absolute; inset:0;
-    background-image: repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 26px);
-    pointer-events:none;
-  }
-  .eyebrow{
-    font-family:'IBM Plex Mono', monospace;
-    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--husk-soft); opacity:.9; margin:0 0 14px;
-  }
-  .hero h1{
-    font-family:'Fraunces', serif; font-weight:500; font-optical-sizing:auto;
-    font-size:clamp(28px,7vw,34px); line-height:1.08; margin:0 0 6px; letter-spacing:-.01em;
-  }
-  .hero .sub{ font-size:14.5px; opacity:.85; margin:0; max-width:34ch; }
-  .farmer-card{
-    margin-top:22px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16);
-    border-radius:14px; padding:16px; display:flex; gap:14px; align-items:center; backdrop-filter:blur(2px);
-  }
-  .farmer-avatar{
-    width:54px; height:54px; border-radius:50%; flex:none;
-    background:var(--husk); color:var(--paddy-deep); font-family:'Fraunces',serif; font-weight:600; font-size:20px;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .farmer-meta .name{ font-family:'Fraunces',serif; font-size:17px; font-weight:600; }
-  .farmer-meta .loc{ font-size:12.5px; opacity:.82; margin-top:2px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--ink); color:var(--husk-soft); }
+  .topbar .brand{ font-family:'Fraunces',serif; font-weight:600; font-size:15px; color:var(--paper); }
+  .topbar a{ font-size:12.5px; text-decoration:none; color:var(--husk); border:1px solid rgba(199,154,61,0.5); padding:6px 12px; border-radius:100px; }
 
-  /* ---------- Thread / spine layout ---------- */
-  .thread-wrap{ position:relative; padding:8px 24px 100px; }
-  .thread-wrap::before{
-    content:"";
-    position:absolute; left:34px; top:6px; bottom:70px; width:2px;
-    background:repeating-linear-gradient(180deg, var(--husk) 0 6px, transparent 6px 11px);
-  }
-  .stage{ position:relative; padding:22px 0 22px 40px; }
-  .stage-node{
-    position:absolute; left:0; top:24px; width:20px; height:20px; border-radius:50%;
-    background:var(--paper); border:2.5px solid var(--husk);
-    display:flex; align-items:center; justify-content:center;
-  }
-  .stage-node::after{ content:""; width:6px; height:6px; border-radius:50%; background:var(--husk); }
-  .stage-label{
-    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--soil); margin:0 0 6px; opacity:.75;
-  }
-  .stage h2{
-    font-family:'Fraunces',serif; font-weight:500; font-size:19px; margin:0 0 10px; color:var(--paddy-deep);
-  }
-  .stage p.story{ font-size:14.5px; line-height:1.6; margin:0 0 10px; color:#3a3630; }
+  .hero{ background:linear-gradient(180deg, var(--paddy-deep) 0%, var(--paddy) 100%); color:var(--paper); padding:22px 22px 20px; }
+  .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--husk-soft); opacity:.9; margin:0 0 8px; }
+  .hero h1{ font-family:'Fraunces', serif; font-weight:500; font-size:clamp(22px,6vw,26px); line-height:1.15; margin:0; letter-spacing:-.01em; }
 
-  .pill-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-  .pill{
-    font-size:12.5px; background:var(--husk-soft); color:var(--soil); padding:5px 11px; border-radius:100px;
-    font-weight:500;
+  .section{ padding:22px 20px; border-bottom:1px solid var(--line); }
+  .section h2{ font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin:0 0 4px; color:var(--paddy-deep); }
+  .section .section-sub{ font-size:12.5px; color:var(--soil); opacity:.8; margin:0 0 16px; }
+
+  .profile-card{ display:flex; gap:16px; align-items:flex-start; }
+  .avatar{ width:84px; height:84px; border-radius:16px; flex:none; object-fit:cover; background:var(--husk-soft); }
+  .avatar-fallback{
+    width:84px; height:84px; border-radius:16px; flex:none; background:var(--husk); color:var(--paddy-deep);
+    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; font-size:28px;
   }
-  .data-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
-  .data-cell{ background:var(--parchment); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
-  .data-cell .k{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--soil); opacity:.75; }
-  .data-cell .v{ font-family:'IBM Plex Mono', monospace; font-size:15px; font-weight:500; margin-top:3px; color:var(--ink); }
+  .profile-meta .name{ font-family:'Fraunces',serif; font-weight:600; font-size:19px; }
+  .profile-meta .loc{ font-size:13px; color:var(--soil); margin-top:2px; }
+  .profile-story{ font-size:14px; line-height:1.6; margin-top:14px; color:#3a3630; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chip{ font-size:12px; background:var(--husk-soft); color:var(--soil); padding:5px 11px; border-radius:100px; font-weight:500; }
+  .kv-list{ margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .kv{ background:var(--parchment); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
+  .kv .k{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--soil); opacity:.75; }
+  .kv .v{ font-size:13.5px; font-weight:500; margin-top:2px; }
 
-  .pass-row{ display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
-  .pass-chip{ display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:500; background:#EAF2EC; color:var(--ok); border:1px solid #CFE3D4; padding:5px 10px; border-radius:8px; }
-  .pass-chip .dot{ width:7px; height:7px; border-radius:50%; background:var(--ok); }
+  .plot-tabs{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .plot-tab{ font-size:12.5px; padding:6px 12px; border-radius:100px; border:1px solid var(--line); background:var(--paper); cursor:pointer; font-weight:500; }
+  .plot-tab.active{ background:var(--paddy); color:var(--paper); border-color:var(--paddy); }
+  #map{ height:220px; border-radius:14px; border:1px solid var(--line); background:var(--parchment); }
+  .map-empty{ height:220px; border-radius:14px; border:1px dashed var(--line); background:var(--parchment); display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; font-size:12.5px; color:var(--soil); }
+  .plot-detail{ margin-top:14px; }
 
-  .carbon-note{ font-size:12px; color:var(--soil); background:#FBF7EC; border:1px dashed var(--husk); border-radius:8px; padding:8px 10px; margin-top:10px; }
+  .disclosure-block{ margin-bottom:18px; }
+  .disclosure-block h3{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--soil); margin:0 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .field-grid .kv .v{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; word-break:break-word; }
+  .record-row{ background:var(--parchment); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:12.5px; }
+  .record-row .rk{ color:var(--soil); }
 
-  footer.provenance{
-    padding:22px 24px 34px; background:var(--ink); color:var(--husk-soft);
-  }
-  footer.provenance .batch{ font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:.03em; }
-  footer.provenance .fine{ font-size:11.5px; opacity:.6; margin-top:10px; line-height:1.5; }
+  footer.provenance{ padding:20px; background:var(--ink); color:var(--husk-soft); }
+  footer.provenance .batch{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; }
+  footer.provenance .fine{ font-size:11px; opacity:.6; margin-top:8px; line-height:1.5; }
 
-  .not-found{ padding:60px 24px; text-align:center; }
+  .not-found, .loading-msg{ padding:60px 24px; text-align:center; }
   .not-found h1{ font-family:'Fraunces',serif; font-size:22px; }
-  .not-found p{ font-size:14px; color:#665; }
-
-  @media (prefers-reduced-motion: no-preference){
-    .stage{ opacity:0; transform:translateY(10px); animation:rise .6s ease forwards; }
-  }
-  @keyframes rise{ to{ opacity:1; transform:translateY(0); } }
+  .not-found p, .loading-msg p{ font-size:14px; color:#665; }
 </style>
 </head>
 <body>
-<div id="app" class="app"></div>
 <div id="app" class="app">
-  <div class="loading-state">
-    <p style="padding:60px 24px;text-align:center;font-family:'IBM Plex Sans',sans-serif;color:#6B4A2F;">Loading this batch's story…</p>
-  </div>
+  <div class="loading-msg"><p>Loading this batch's story…</p></div>
 </div>
 
-<!-- config.js sets window.API_BASE_URL — the only file you edit per environment -->
 <script src="config.js"></script>
-
 <script>
 (async function(){
   const app = document.getElementById('app');
@@ -138,11 +82,7 @@
   const batchId = params.get('batch');
 
   if(!batchId){
-    app.innerHTML = `
-      <div class="not-found">
-        <h1>No batch code found</h1>
-        <p>This page is meant to be opened by scanning a QR code on a rice packet. If you typed this link manually, add ?batch=YOUR_BATCH_ID to the URL.</p>
-      </div>`;
+    app.innerHTML = `<div class="not-found"><h1>No batch code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="scan.html">scan one now</a>.</p></div>`;
     return;
   }
 
@@ -150,134 +90,160 @@
   try{
     const res = await fetch(`${window.API_BASE_URL}/api/batches/${encodeURIComponent(batchId)}/consumer`);
     if(res.status === 404){
-      app.innerHTML = `
-        <div class="not-found">
-          <h1>We couldn't find that batch</h1>
-          <p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p>
-        </div>`;
+      app.innerHTML = `<div class="not-found"><h1>We couldn't find that batch</h1><p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p></div>`;
       return;
     }
-    if(!res.ok) throw new Error(`API error: ${res.status}`);
+    if(!res.ok) throw new Error('API error: ' + res.status);
     record = await res.json();
   }catch(err){
-    app.innerHTML = `
-      <div class="not-found">
-        <h1>Couldn't load this batch right now</h1>
-        <p>There may be a connection issue. Please try scanning again in a moment.</p>
-      </div>`;
+    app.innerHTML = `<div class="not-found"><h1>Couldn't load this batch right now</h1><p>There may be a connection issue. Please try scanning again in a moment.</p></div>`;
     return;
   }
 
-  const initials = record.farmer.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  const fp = record.farmer_profile || {};
+  const plots = record.farm_plots || [];
+  const disclosure = record.full_disclosure || [];
   const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
+  const initials = (fp.name || '?').split(' ').map(w=>w[0]).slice(0,2).join('');
+
+  const avatarHtml = fp.photo_url
+    ? `<img class="avatar" src="${fp.photo_url}" alt="${fp.name || 'Farmer'}">`
+    : `<div class="avatar-fallback">${initials}</div>`;
+
+  const certChips = (fp.certifications || []).map(c => `<span class="chip">${c}</span>`).join('');
+  const fpoChip = fp.fpo ? `<span class="chip">${fp.fpo}</span>` : '';
+  const icsChip = fp.ics_group ? `<span class="chip">${fp.ics_group}</span>` : '';
+
+  const section1 = `
+    <section class="section">
+      <h2>Farmer</h2>
+      <div class="profile-card">
+        ${avatarHtml}
+        <div class="profile-meta">
+          <div class="name">${fp.name || 'Unnamed farmer'}</div>
+          <div class="loc">${[fp.village, fp.district, fp.state].filter(Boolean).join(', ')}</div>
+        </div>
+      </div>
+      ${fp.story ? `<p class="profile-story">${fp.story}</p>` : ''}
+      <div class="chip-row">${icsChip}${fpoChip}${certChips}</div>
+      <div class="kv-list">
+        <div class="kv"><div class="k">Experience</div><div class="v">${fp.experience_years ? Math.round(fp.experience_years) + ' years' : '—'}</div></div>
+        <div class="kv"><div class="k">Training attended</div><div class="v">${fp.training_attended || '—'}</div></div>
+      </div>
+    </section>`;
+
+  let plotTabsHtml = '';
+  if(plots.length > 1){
+    plotTabsHtml = `<div class="plot-tabs">` + plots.map((p,i) =>
+      `<div class="plot-tab ${i===0?'active':''}" data-plot-idx="${i}">Plot ${p.plot_id ?? i+1}</div>`
+    ).join('') + `</div>`;
+  }
+
+  const hasAnyGeo = plots.some(p => p.centroid || p.geo_boundary);
+  const mapHtml = hasAnyGeo
+    ? `<div id="map"></div>`
+    : `<div class="map-empty">GPS location for this plot hasn't been recorded yet. Once field staff upload it, the boundary will appear here.</div>`;
+
+  function plotDetailHtml(p){
+    if(!p) return '';
+    return `
+      <div class="kv-list">
+        <div class="kv"><div class="k">Area</div><div class="v">${p.area_acres ? p.area_acres + ' acres' : '—'}</div></div>
+        <div class="kv"><div class="k">Soil type</div><div class="v">${p.soil_type || '—'}</div></div>
+        <div class="kv"><div class="k">Irrigation</div><div class="v">${p.irrigation || '—'}</div></div>
+        <div class="kv"><div class="k">Water source</div><div class="v">${p.water_source || '—'}</div></div>
+        <div class="kv"><div class="k">Survey no.</div><div class="v">${p.survey_no || '—'}</div></div>
+        <div class="kv"><div class="k">Organic since</div><div class="v">${fmtDate(p.organic_since)}</div></div>
+      </div>`;
+  }
+
+  const section2 = `
+    <section class="section">
+      <h2>Farm plot</h2>
+      <p class="section-sub">${plots.length > 1 ? plots.length + ' plots linked to this batch — tap to switch.' : 'Location and land details for this plot.'}</p>
+      ${plotTabsHtml}
+      ${mapHtml}
+      <div class="plot-detail" id="plotDetail">${plotDetailHtml(plots[0])}</div>
+    </section>`;
+
+  function renderFields(fields){
+    return `<div class="field-grid">` + Object.entries(fields || {}).map(([k,v]) =>
+      `<div class="kv"><div class="k">${k}</div><div class="v">${v === null || v === '' ? '—' : v}</div></div>`
+    ).join('') + `</div>`;
+  }
+  function renderRecords(records){
+    return (records || []).map(rec =>
+      `<div class="record-row">` + Object.entries(rec).map(([k,v]) =>
+        `<span class="rk">${k}:</span> ${v === null || v === '' ? '—' : v} &nbsp; `
+      ).join('') + `</div>`
+    ).join('');
+  }
+  const disclosureHtml = disclosure.map(block => `
+    <div class="disclosure-block">
+      <h3>${block.title}</h3>
+      ${block.fields ? renderFields(block.fields) : ''}
+      ${block.records ? renderRecords(block.records) : ''}
+    </div>`).join('');
+
+  const section3 = `
+    <section class="section" style="border-bottom:none;">
+      <h2>Full record</h2>
+      <p class="section-sub">Everything logged for this batch, field to pack. Personal contact and banking details are never shown here.</p>
+      ${disclosureHtml || '<p class="section-sub">No further records available for this batch.</p>'}
+    </section>`;
 
   app.innerHTML = `
-
-  if(!record){
-    app.innerHTML = <div class="not-found">
-        <h1>We couldn't find that batch</h1>
-        <p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p>
-      </div>;
-    return;
-  }
-
-  const initials = record.farmer.name.split(' ').map(w=>w[0]).slice(0,2).join('');
-  const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
-
-  app.innerHTML = 
-    <section class="hero">
-      <p class="eyebrow">Batch ${record.batch_id} · ${record.product_name}</p>
-      <h1>Grown by ${record.farmer.name.split(' ')[0]}, milled and packed for you</h1>
-      <p class="sub">Every stage of this rice's journey — field to pack — verified and on record.</p>
-      <div class="farmer-card">
-        <div class="farmer-avatar">${initials}</div>
-        <div class="farmer-meta">
-          <div class="name">${record.farmer.name}</div>
-          <div class="loc">${record.farmer.village}, ${record.farmer.district}, ${record.farmer.state}</div>
-        </div>
-      </div>
-    </section>
-
-    <div class="thread-wrap">
-
-      <div class="stage" style="animation-delay:.02s">
-        <div class="stage-node"></div>
-        <p class="stage-label">01 · The farmer</p>
-        <h2>${record.farmer.experience_years ? Math.round(record.farmer.experience_years) + ' years farming' : 'The story so far'}</h2>
-        <p class="story">${record.farmer.story || ''}</p>
-        <div class="pill-row">
-          ${record.farmer.fpo ? `<span class="pill">${record.farmer.fpo}</span>` : ''}
-          ${record.farmer.certification ? `<span class="pill">${record.farmer.certification}</span>` : ''}
-        </div>
-      </div>
-
-      <div class="stage" style="animation-delay:.08s">
-        <div class="stage-node"></div>
-        <p class="stage-label">02 · The field</p>
-        <h2>${record.farm.area_acres ? record.farm.area_acres + ' acres' : 'The plot'} of ${record.farm.soil_type || 'farmland'}</h2>
-        <div class="data-grid">
-          <div class="data-cell"><div class="k">Irrigation</div><div class="v">${record.farm.irrigation || '—'}</div></div>
-          <div class="data-cell"><div class="k">Organic since</div><div class="v">${fmtDate(record.farm.organic_since)}</div></div>
-        </div>
-      </div>
-
-      <div class="stage" style="animation-delay:.14s">
-        <div class="stage-node"></div>
-        <p class="stage-label">03 · The crop</p>
-        <h2>${record.crop.crop} — ${record.crop.variety}</h2>
-        <div class="data-grid">
-          <div class="data-cell"><div class="k">Season</div><div class="v">${record.crop.season || '—'}</div></div>
-          <div class="data-cell"><div class="k">Sown</div><div class="v">${fmtDate(record.crop.sowing_date)}</div></div>
-          <div class="data-cell"><div class="k">Harvested</div><div class="v">${fmtDate(record.crop.harvest_date)}</div></div>
-          <div class="data-cell"><div class="k">Method</div><div class="v">${record.harvest_summary.method || '—'}</div></div>
-        </div>
-      </div>
-
-      <div class="stage" style="animation-delay:.20s">
-        <div class="stage-node"></div>
-        <p class="stage-label">04 · Milling &amp; grading</p>
-        <h2>Graded ${record.processing_summary.grading || '—'}</h2>
-        <div class="data-grid">
-          <div class="data-cell"><div class="k">Recovery rate</div><div class="v">${record.processing_summary.recovery_pct ? Math.round(record.processing_summary.recovery_pct*100)+'%' : '—'}</div></div>
-          <div class="data-cell"><div class="k">Yield (this plot)</div><div class="v">${record.harvest_summary.yield_kg ? record.harvest_summary.yield_kg+' kg' : '—'}</div></div>
-        </div>
-      </div>
-
-      <div class="stage" style="animation-delay:.26s">
-        <div class="stage-node"></div>
-        <p class="stage-label">05 · Lab-verified</p>
-        <h2>Nutrition &amp; safety</h2>
-        <div class="data-grid">
-          <div class="data-cell"><div class="k">Protein</div><div class="v">${record.nutrition_and_safety.protein ?? '—'} g</div></div>
-          <div class="data-cell"><div class="k">Iron</div><div class="v">${record.nutrition_and_safety.iron ?? '—'} mg</div></div>
-          <div class="data-cell"><div class="k">Calcium</div><div class="v">${record.nutrition_and_safety.calcium ?? '—'} mg</div></div>
-          <div class="data-cell"><div class="k">Fibre</div><div class="v">${record.nutrition_and_safety.fiber ?? '—'} g</div></div>
-        </div>
-        <div class="pass-row">
-          <div class="pass-chip"><span class="dot"></span>Heavy metals: ${record.nutrition_and_safety.heavy_metals || '—'}</div>
-          <div class="pass-chip"><span class="dot"></span>Pesticides: ${record.nutrition_and_safety.pesticides || '—'}</div>
-          <div class="pass-chip"><span class="dot"></span>Microbiology: ${record.nutrition_and_safety.microbiology || '—'}</div>
-        </div>
-      </div>
-
-      <div class="stage" style="animation-delay:.32s">
-        <div class="stage-node"></div>
-        <p class="stage-label">06 · Impact</p>
-        <h2>Farming practice, in numbers</h2>
-        <div class="data-grid">
-          <div class="data-cell"><div class="k">Water retention</div><div class="v">${record.sustainability.water_retention || '—'}</div></div>
-          <div class="data-cell"><div class="k">Biodiversity</div><div class="v">${record.sustainability.biodiversity || '—'}</div></div>
-        </div>
-        ${record.sustainability.basalt_erw_applied === 'YES' ? `<div class="carbon-note">Enhanced rock weathering applied on this plot. CO₂ removal: ${record.sustainability.co2_removal || 'pending verification'} — estimated, pending third-party MRV verification.</div>` : ''}
-      </div>
-
+    <div class="topbar">
+      <span class="brand">Rice Trace</span>
+      <a class="scan-link" href="scan.html">Scan another</a>
     </div>
-
+    <section class="hero">
+      <p class="eyebrow">Batch ${record.batch_id} · ${record.product_name || ''}</p>
+      <h1>Field to pack — the full story of this rice</h1>
+    </section>
+    ${section1}
+    ${section2}
+    ${section3}
     <footer class="provenance">
       <div class="batch">BATCH ${record.batch_id} &nbsp;·&nbsp; PACKED ${fmtDate(record.pack_date)} &nbsp;·&nbsp; BEST BEFORE ${fmtDate(record.expiry)}</div>
-      <div class="fine">This page reflects records logged by field staff and lab partners for this specific batch. Location shown at village/district level only. Report a concern about this batch to the retailer where it was purchased.</div>
+      <div class="fine">Personal contact numbers, age, gender, and banking details are never shown on this page. Report a concern to the retailer where this was purchased.</div>
     </footer>
   `;
+
+  if(hasAnyGeo && window.L){
+    const map = L.map('map', { zoomControl: false, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    const layers = [];
+
+    function drawPlot(idx){
+      layers.forEach(l => map.removeLayer(l));
+      layers.length = 0;
+      const p = plots[idx];
+      if(!p) return;
+      if(p.geo_boundary){
+        const layer = L.geoJSON(p.geo_boundary, { style: { color: '#3B6E4E', weight: 2, fillColor: '#C79A3D', fillOpacity: 0.25 } }).addTo(map);
+        layers.push(layer);
+        map.fitBounds(layer.getBounds(), { padding: [20,20] });
+      } else if(p.centroid && p.centroid.lat && p.centroid.lng){
+        const marker = L.marker([p.centroid.lat, p.centroid.lng]).addTo(map);
+        layers.push(marker);
+        map.setView([p.centroid.lat, p.centroid.lng], 15);
+      }
+    }
+
+    drawPlot(0);
+
+    document.querySelectorAll('.plot-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.plot-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const idx = parseInt(tab.dataset.plotIdx, 10);
+        drawPlot(idx);
+        document.getElementById('plotDetail').innerHTML = plotDetailHtml(plots[idx]);
+      });
+    });
+  }
 })();
 </script>
 </body>

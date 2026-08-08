@@ -1,10 +1,9 @@
 /**
- * One-time import of the existing pilot data (from the original spreadsheet)
+ * One-time import of the pilot data (extracted from the original spreadsheet)
  * into MongoDB, generating a QR for each batch that doesn't already have one.
  *
  * Usage: npm run seed
- * Expects consumer_view_data.json and full_traceability_data.json in this folder
- * (copy them in from the extraction step, or point SEED_FILE at your own export).
+ * Expects portal_view.json in this folder (already included).
  */
 require('dotenv').config();
 const fs = require('fs');
@@ -14,12 +13,23 @@ const Batch = require('./models/Batch');
 const { generateQRForBatch } = require('./utils/generateQR');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/rice_trace';
-const SEED_FILE = path.join(__dirname, 'consumer_view_data.json');
+const SEED_FILE = path.join(__dirname, 'portal_view.json');
+
+function normalizePlotIds(record) {
+  // Plot IDs come out of the spreadsheet as numbers (92.0) — normalize to
+  // strings so lookups by plot_id (e.g. the KML upload route) are consistent.
+  if (Array.isArray(record.farm_plots)) {
+    record.farm_plots = record.farm_plots.map(p => ({
+      ...p,
+      plot_id: p.plot_id != null ? String(p.plot_id) : p.plot_id
+    }));
+  }
+  return record;
+}
 
 async function run() {
   if (!fs.existsSync(SEED_FILE)) {
     console.error(`Seed file not found: ${SEED_FILE}`);
-    console.error('Copy consumer_view_data.json into the backend folder first.');
     process.exit(1);
   }
 
@@ -29,7 +39,8 @@ async function run() {
   const records = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8'));
   let created = 0, skipped = 0;
 
-  for (const rec of records) {
+  for (const raw of records) {
+    const rec = normalizePlotIds(raw);
     const existing = await Batch.findOne({ batch_id: rec.batch_id });
     if (existing) { skipped++; continue; }
 

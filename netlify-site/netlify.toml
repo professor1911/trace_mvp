@@ -7,3 +7,8 @@
   from = "/b/*"
   to = "/trace.html?batch=:splat"
   status = 200
+
+[[redirects]]
+  from = "/"
+  to = "/scan.html"
+  status = 200

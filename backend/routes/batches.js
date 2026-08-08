@@ -1,19 +1,27 @@
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const Batch = require('../models/Batch');
 const { generateQRForBatch } = require('../utils/generateQR');
+const { kmlStringToGeoJSON } = require('../utils/kmlParser');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 /**
- * PUBLIC — this is the one the frontend/QR calls. No auth. No internal fields.
+ * PUBLIC — this is what the QR scanner and the portal page call. No auth.
+ * Returns the full three-section portal view already stored on the batch —
+ * farmer_profile, farm_plots (with GPS/GeoJSON), full_disclosure.
+ * The schema itself has no age/gender/mobile/banking fields, so there's
+ * nothing to filter out here — the guarantee is structural, not a query-time
+ * exclusion that could be forgotten on a future field.
  * GET /api/batches/:batchId/consumer
  */
 router.get('/:batchId/consumer', async (req, res) => {
   try {
     const batch = await Batch.findOne({ batch_id: req.params.batchId, status: 'active' })
-      .select('-internal -farmer.contact_number -farm.gps_lat -farm.gps_long -_id -__v');
+      .select('-_id -__v');
 
     if (!batch) {
-      // Deliberately vague — don't reveal whether the ID never existed or was revoked
       return res.status(404).json({ error: 'not_found', message: 'No active batch found for this code.' });
     }
 
@@ -24,9 +32,7 @@ router.get('/:batchId/consumer', async (req, res) => {
 });
 
 /**
- * INTERNAL — full record for staff/admin tools. Protect with real auth
- * (API key, JWT, whatever your team uses) before going live — this stub only
- * checks a shared header for demo purposes.
+ * INTERNAL — full Mongo document, admin tools only.
  * GET /api/batches/:batchId/full
  */
 router.get('/:batchId/full', requireAdmin, async (req, res) => {
@@ -36,21 +42,16 @@ router.get('/:batchId/full', requireAdmin, async (req, res) => {
 });
 
 /**
- * INTERNAL — create a new batch (this is the "packaging" step).
- * Automatically generates and attaches a QR code — no separate manual step.
+ * INTERNAL — create a batch. Auto-generates its QR in the same request.
  * POST /api/batches
  */
 router.post('/', requireAdmin, async (req, res) => {
   try {
     const payload = req.body;
-    if (!payload.batch_id) {
-      return res.status(400).json({ error: 'batch_id is required' });
-    }
+    if (!payload.batch_id) return res.status(400).json({ error: 'batch_id is required' });
 
     const existing = await Batch.findOne({ batch_id: payload.batch_id });
-    if (existing) {
-      return res.status(409).json({ error: 'batch_id already exists' });
-    }
+    if (existing) return res.status(409).json({ error: 'batch_id already exists' });
 
     const batch = new Batch(payload);
     const { url, filePath } = await generateQRForBatch(batch.batch_id);
@@ -70,8 +71,36 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 /**
- * INTERNAL — revoke a batch (mislabeled packet, recall, etc).
- * The public endpoint will then 404 for this batch_id without deleting the record.
+ * INTERNAL — upload a KML shapefile for a specific plot on a batch's farmer.
+ * Multiple plots per farmer are supported — pass plot_id to target the right one.
+ * POST /api/batches/:batchId/plots/:plotId/boundary
+ * Body: multipart/form-data, field name "kml"
+ */
+router.post('/:batchId/plots/:plotId/boundary', requireAdmin, upload.single('kml'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'no file uploaded, expected field name "kml"' });
+
+    const geojson = kmlStringToGeoJSON(req.file.buffer.toString('utf8'));
+    const feature = geojson.features.find(f => f.geometry && (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon'));
+    if (!feature) return res.status(400).json({ error: 'no polygon/multipolygon geometry found in KML' });
+
+    const batch = await Batch.findOne({ batch_id: req.params.batchId });
+    if (!batch) return res.status(404).json({ error: 'batch not found' });
+
+    const plot = batch.farm_plots.find(p => p.plot_id === req.params.plotId);
+    if (!plot) return res.status(404).json({ error: 'plot not found on this batch' });
+
+    plot.geo_boundary = feature.geometry;
+    await batch.save();
+
+    res.json({ message: 'Plot boundary updated', plot_id: plot.plot_id, geo_boundary: plot.geo_boundary });
+  } catch (err) {
+    res.status(500).json({ error: 'server_error', detail: err.message });
+  }
+});
+
+/**
+ * INTERNAL — revoke a batch.
  * PATCH /api/batches/:batchId/revoke
  */
 router.patch('/:batchId/revoke', requireAdmin, async (req, res) => {
@@ -84,10 +113,6 @@ router.patch('/:batchId/revoke', requireAdmin, async (req, res) => {
   res.json({ message: 'Batch revoked', batch_id: batch.batch_id });
 });
 
-/**
- * Minimal admin guard for the demo — replace with real auth before production.
- * Expects header: x-admin-key: <ADMIN_API_KEY>
- */
 function requireAdmin(req, res, next) {
   const key = req.header('x-admin-key');
   if (!process.env.ADMIN_API_KEY || key !== process.env.ADMIN_API_KEY) {
