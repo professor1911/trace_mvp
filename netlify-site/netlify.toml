@@ -1,0 +1,9 @@
+[build]
+  publish = "."
+
+# Optional: make https://yoursite.netlify.app/b/BATCH-2026-001 work
+# (nicer for printing on packets than trace.html?batch=...)
+[[redirects]]
+  from = "/b/*"
+  to = "/trace.html?batch=:splat"
+  status = 200
