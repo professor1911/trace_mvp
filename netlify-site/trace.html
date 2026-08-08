@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rice Trace — Farm to Pack</title>
+<title>Rice Trace — Field to Pack</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -18,13 +18,17 @@
   .app{ max-width:480px; margin:0 auto; min-height:100vh; background:var(--paper); }
   a.scan-link{ color:inherit; }
 
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--ink); color:var(--husk-soft); }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--ink); color:var(--husk-soft); position:sticky; top:0; z-index:5; }
   .topbar .brand{ font-family:'Fraunces',serif; font-weight:600; font-size:15px; color:var(--paper); }
   .topbar a{ font-size:12.5px; text-decoration:none; color:var(--husk); border:1px solid rgba(199,154,61,0.5); padding:6px 12px; border-radius:100px; }
 
   .hero{ background:linear-gradient(180deg, var(--paddy-deep) 0%, var(--paddy) 100%); color:var(--paper); padding:22px 22px 20px; }
   .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--husk-soft); opacity:.9; margin:0 0 8px; }
   .hero h1{ font-family:'Fraunces', serif; font-weight:500; font-size:clamp(22px,6vw,26px); line-height:1.15; margin:0; letter-spacing:-.01em; }
+
+  .progress-rail{ display:flex; gap:4px; padding:14px 20px 0; }
+  .progress-dot{ flex:1; height:4px; border-radius:4px; background:var(--line); }
+  .progress-dot.done{ background:var(--paddy); }
 
   .section{ padding:22px 20px; border-bottom:1px solid var(--line); }
   .section h2{ font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin:0 0 4px; color:var(--paddy-deep); }
@@ -53,12 +57,26 @@
   .map-empty{ height:220px; border-radius:14px; border:1px dashed var(--line); background:var(--parchment); display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; font-size:12.5px; color:var(--soil); }
   .plot-detail{ margin-top:14px; }
 
-  .disclosure-block{ margin-bottom:18px; }
-  .disclosure-block h3{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--soil); margin:0 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  /* Interactive journey timeline */
+  .timeline{ position:relative; padding-left:26px; }
+  .timeline::before{ content:''; position:absolute; left:9px; top:6px; bottom:6px; width:2px; background:var(--line); }
+  .stage{ position:relative; margin-bottom:10px; }
+  .stage-dot{ position:absolute; left:-26px; top:16px; width:18px; height:18px; border-radius:50%; background:var(--paper); border:2px solid var(--husk); }
+  .stage.has-data .stage-dot{ background:var(--paddy); border-color:var(--paddy); }
+  .stage-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; background:var(--parchment); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .stage-head:hover{ border-color:var(--husk); }
+  .stage-title{ font-weight:600; font-size:14px; }
+  .stage-count{ font-size:11px; color:var(--soil); opacity:.75; margin-top:2px; }
+  .stage-chevron{ transition:transform .2s; color:var(--soil); font-size:13px; flex:none; }
+  .stage.open .stage-chevron{ transform:rotate(180deg); }
+  .stage-body{ display:none; padding:14px 4px 4px; }
+  .stage.open .stage-body{ display:block; }
+
   .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .field-grid .kv .v{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; word-break:break-word; }
   .record-row{ background:var(--parchment); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:12.5px; }
   .record-row .rk{ color:var(--soil); }
+  .empty-note{ font-size:12.5px; color:var(--soil); opacity:.8; padding:6px 2px; }
 
   footer.provenance{ padding:20px; background:var(--ink); color:var(--husk-soft); }
   footer.provenance .batch{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; }
@@ -79,38 +97,39 @@
 (async function(){
   const app = document.getElementById('app');
   const params = new URLSearchParams(window.location.search);
-  const batchId = params.get('batch');
+  const qrCode = params.get('qr') || params.get('batch');
 
-  if(!batchId){
-    app.innerHTML = `<div class="not-found"><h1>No batch code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="index.html">scan one now</a>.</p></div>`;
+  if(!qrCode){
+    app.innerHTML = `<div class="not-found"><h1>No QR code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="index.html">scan one now</a>.</p></div>`;
     return;
   }
 
-  let record;
+  let data;
   try{
-    const res = await fetch(`${window.API_BASE_URL}/api/batches/${encodeURIComponent(batchId)}/consumer`);
+    const res = await fetch(`${window.API_BASE_URL}/api/trace/${encodeURIComponent(qrCode)}`);
     if(res.status === 404){
-      app.innerHTML = `<div class="not-found"><h1>We couldn't find that batch</h1><p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p></div>`;
+      app.innerHTML = `<div class="not-found"><h1>We couldn't find that code</h1><p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p></div>`;
       return;
     }
     if(!res.ok) throw new Error('API error: ' + res.status);
-    record = await res.json();
+    data = await res.json();
   }catch(err){
     app.innerHTML = `<div class="not-found"><h1>Couldn't load this batch right now</h1><p>There may be a connection issue. Please try scanning again in a moment.</p></div>`;
     return;
   }
 
-  const fp = record.farmer_profile || {};
-  const plots = record.farm_plots || [];
-  const disclosure = record.full_disclosure || [];
+  const { packaging, farmer, plots = [], crop_cycles = [], inputs = [], activities = [],
+          pest_disease = [], irrigation = [], monitoring = [], sustainability = [],
+          harvest = [], processing = [], lab_testing = [], dispatch = [] } = data;
+  const fp = farmer || {};
   const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
   const initials = (fp.name || '?').split(' ').map(w=>w[0]).slice(0,2).join('');
 
-  const avatarHtml = fp.photo_url
-    ? `<img class="avatar" src="${fp.photo_url}" alt="${fp.name || 'Farmer'}">`
+  const avatarHtml = fp.photo
+    ? `<img class="avatar" src="${fp.photo}" alt="${fp.name || 'Farmer'}">`
     : `<div class="avatar-fallback">${initials}</div>`;
 
-  const certChips = (fp.certifications || []).map(c => `<span class="chip">${c}</span>`).join('');
+  const certChips = (fp.certification ? [fp.certification] : []).map(c => `<span class="chip">${c}</span>`).join('');
   const fpoChip = fp.fpo ? `<span class="chip">${fp.fpo}</span>` : '';
   const icsChip = fp.ics_group ? `<span class="chip">${fp.ics_group}</span>` : '';
 
@@ -166,30 +185,91 @@
       <div class="plot-detail" id="plotDetail">${plotDetailHtml(plots[0])}</div>
     </section>`;
 
-  function renderFields(fields){
-    return `<div class="field-grid">` + Object.entries(fields || {}).map(([k,v]) =>
-      `<div class="kv"><div class="k">${k}</div><div class="v">${v === null || v === '' ? '—' : v}</div></div>`
+  // --- Interactive journey timeline -----------------------------------
+  function fieldGrid(obj, keys){
+    return `<div class="field-grid">` + keys.map(([label,val]) =>
+      `<div class="kv"><div class="k">${label}</div><div class="v">${val === null || val === undefined || val === '' ? '—' : val}</div></div>`
     ).join('') + `</div>`;
   }
-  function renderRecords(records){
-    return (records || []).map(rec =>
-      `<div class="record-row">` + Object.entries(rec).map(([k,v]) =>
-        `<span class="rk">${k}:</span> ${v === null || v === '' ? '—' : v} &nbsp; `
-      ).join('') + `</div>`
-    ).join('');
+  function recordList(records, renderer){
+    if(!records.length) return `<p class="empty-note">No records logged yet for this stage.</p>`;
+    return records.map(r => `<div class="record-row">${renderer(r)}</div>`).join('');
   }
-  const disclosureHtml = disclosure.map(block => `
-    <div class="disclosure-block">
-      <h3>${block.title}</h3>
-      ${block.fields ? renderFields(block.fields) : ''}
-      ${block.records ? renderRecords(block.records) : ''}
-    </div>`).join('');
+  const rk = (label, val) => `<span class="rk">${label}:</span> ${val === null || val === undefined || val === '' ? '—' : val} &nbsp; `;
 
-  const section3 = `
+  const stages = [
+    {
+      title: 'Crop cycle', count: crop_cycles.length,
+      body: recordList(crop_cycles, c => rk('Crop', c.crop) + rk('Variety', c.variety) + rk('Season', c.season) +
+        rk('Sowing', fmtDate(c.sowing)) + rk('Flowering', fmtDate(c.flowering)) + rk('Harvest', fmtDate(c.harvest)))
+    },
+    {
+      title: 'Organic inputs used', count: inputs.length,
+      body: recordList(inputs, i => rk('Category', i.category) + rk('Product', i.product) + rk('Dose', i.dose ? i.dose + ' ' + (i.unit||'') : null) + rk('Applied', fmtDate(i.application_date)))
+    },
+    {
+      title: 'Field activity', count: activities.length,
+      body: recordList(activities, a => rk('Activity', a.activity) + rk('Description', a.description) + rk('Date', fmtDate(a.date)))
+    },
+    {
+      title: 'Growth monitoring', count: monitoring.length,
+      body: recordList(monitoring, m => rk('Week', m.week) + rk('Plant height', m.plant_height) + rk('NDVI', m.ndvi) + rk('Remarks', m.remarks))
+    },
+    {
+      title: 'Pest & disease watch', count: pest_disease.length,
+      body: recordList(pest_disease, p => rk('Pest', p.pest) + rk('Disease', p.disease) + rk('Severity', p.severity) + rk('Organic control', p.organic_control))
+    },
+    {
+      title: 'Irrigation', count: irrigation.length,
+      body: recordList(irrigation, i => rk('Method', i.method) + rk('Source', i.water_source) + rk('Quantity', i.quantity) + rk('Rainfall', i.rainfall))
+    },
+    {
+      title: 'Sustainability & carbon', count: sustainability.length,
+      body: recordList(sustainability, s => rk('CO2 removal', s.co2_removal) + rk('Water retention', s.water_retention) + rk('Biodiversity', s.biodiversity) + rk('Trees', s.trees))
+    },
+    {
+      title: 'Harvest', count: harvest.length,
+      body: recordList(harvest, h => rk('Date', fmtDate(h.date)) + rk('Yield', h.yield_kg ? h.yield_kg + ' kg' : null) + rk('Moisture', h.moisture) + rk('Method', h.harvest_method))
+    },
+    {
+      title: 'Processing', count: processing.length,
+      body: recordList(processing, p => rk('Milling', p.milling) + rk('Grading', p.grading) + rk('Recovery', p.recovery_pct ? (p.recovery_pct*100).toFixed(0)+'%' : null) + rk('Packed', fmtDate(p.packing_date)))
+    },
+    {
+      title: 'Lab testing', count: lab_testing.length,
+      body: recordList(lab_testing, l => rk('Protein', l.protein) + rk('Moisture', l.moisture) + rk('Heavy metals', l.heavy_metals) + rk('Pesticides', l.pesticides))
+    },
+    {
+      title: 'Packaging', count: packaging ? 1 : 0,
+      body: packaging ? fieldGrid(packaging, [['SKU', packaging.sku], ['Pack size', packaging.pack_size], ['Pack date', fmtDate(packaging.pack_date)], ['Expiry', fmtDate(packaging.expiry)], ['QR code', packaging.qr_code], ['Operator', packaging.operator]]) : `<p class="empty-note">No packaging record.</p>`
+    },
+    {
+      title: 'Dispatch', count: dispatch.length,
+      body: recordList(dispatch, d => rk('Buyer', d.buyer) + rk('Destination', d.destination) + rk('Vehicle', d.vehicle) + rk('Dispatched', fmtDate(d.dispatch_date)))
+    }
+  ];
+
+  const doneCount = stages.filter(s => s.count > 0).length;
+  const progressHtml = `<div class="progress-rail">` + stages.map(s => `<div class="progress-dot ${s.count>0?'done':''}"></div>`).join('') + `</div>`;
+
+  const timelineHtml = `
     <section class="section" style="border-bottom:none;">
-      <h2>Full record</h2>
-      <p class="section-sub">Everything logged for this batch, field to pack. Personal contact and banking details are never shown here.</p>
-      ${disclosureHtml || '<p class="section-sub">No further records available for this batch.</p>'}
+      <h2>Field to pack, stage by stage</h2>
+      <p class="section-sub">Tap any stage to see what was logged. ${doneCount} of ${stages.length} stages have records for this batch.</p>
+      <div class="timeline">
+        ${stages.map((s, i) => `
+          <div class="stage ${s.count>0?'has-data':''} ${i===0?'open':''}" data-stage-idx="${i}">
+            <span class="stage-dot"></span>
+            <div class="stage-head">
+              <div>
+                <div class="stage-title">${s.title}</div>
+                <div class="stage-count">${s.count} record${s.count===1?'':'s'}</div>
+              </div>
+              <span class="stage-chevron">▾</span>
+            </div>
+            <div class="stage-body">${s.body}</div>
+          </div>`).join('')}
+      </div>
     </section>`;
 
   app.innerHTML = `
@@ -198,17 +278,22 @@
       <a class="scan-link" href="index.html">Scan another</a>
     </div>
     <section class="hero">
-      <p class="eyebrow">Batch ${record.batch_id} · ${record.product_name || ''}</p>
+      <p class="eyebrow">${packaging ? 'Batch ' + packaging.batch_id : ''} · ${packaging?.sku || ''}</p>
       <h1>Field to pack — the full story of this rice</h1>
     </section>
+    ${progressHtml}
     ${section1}
     ${section2}
-    ${section3}
+    ${timelineHtml}
     <footer class="provenance">
-      <div class="batch">BATCH ${record.batch_id} &nbsp;·&nbsp; PACKED ${fmtDate(record.pack_date)} &nbsp;·&nbsp; BEST BEFORE ${fmtDate(record.expiry)}</div>
+      <div class="batch">QR ${qrCode} &nbsp;·&nbsp; PACKED ${fmtDate(packaging?.pack_date)} &nbsp;·&nbsp; BEST BEFORE ${fmtDate(packaging?.expiry)}</div>
       <div class="fine">Personal contact numbers, age, gender, and banking details are never shown on this page. Report a concern to the retailer where this was purchased.</div>
     </footer>
   `;
+
+  document.querySelectorAll('.stage-head').forEach(head => {
+    head.addEventListener('click', () => head.closest('.stage').classList.toggle('open'));
+  });
 
   if(hasAnyGeo && window.L){
     const map = L.map('map', { zoomControl: false, attributionControl: false });

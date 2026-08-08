@@ -1,9 +1,16 @@
 [build]
   publish = "."
 
-# Optional: make https://yoursite.netlify.app/b/BATCH-2026-001 work
-# (nicer for printing on packets than trace.html?batch=...)
+# Makes https://yoursite.netlify.app/t/QR-001-2026 work — this is the URL
+# baked into every generated QR code (see backend/utils/generateQR.js).
+[[redirects]]
+  from = "/t/*"
+  to = "/trace.html?qr=:splat"
+  status = 200
+
+# Old codes printed before the QR-first cutover still worked via ?batch=;
+# keep the redirect so any already-printed packets don't 404.
 [[redirects]]
   from = "/b/*"
-  to = "/trace.html?batch=:splat"
+  to = "/trace.html?qr=:splat"
   status = 200

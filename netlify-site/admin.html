@@ -3,100 +3,405 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Upload Shapefile</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Rice Trace — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#16241C; --paddy:#3B6E4E; --paper:#FFFDF8; --line:#DCD3BE; }
-  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--paper); color: var(--ink); margin: 0; padding: 40px 20px; }
-  .container { max-width: 500px; margin: 0 auto; }
-  h1 { font-weight: 600; margin-bottom: 24px; color: var(--paddy); }
-  .form-group { margin-bottom: 16px; }
-  label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 14px; }
-  input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box; }
-  input[type="file"] { margin-top: 6px; }
-  button { background: var(--paddy); color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
-  button:hover { opacity: 0.9; }
-  .status { margin-top: 20px; padding: 12px; border-radius: 6px; display: none; }
-  .status.success { background: #e6f4ea; color: #137333; display: block; }
-  .status.error { background: #fce8e6; color: #c5221f; display: block; }
+  :root{ --ink:#16241C; --paddy:#3B6E4E; --paddy-deep:#254B33; --husk:#C79A3D; --husk-soft:#E9D9AE; --parchment:#F6F2E6; --paper:#FFFDF8; --soil:#6B4A2F; --line:#DCD3BE; --err:#c5221f; --ok:#137333; }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:'IBM Plex Sans',sans-serif; background:var(--parchment); color:var(--ink); }
+  a{color:inherit;}
+  input,select,textarea,button{ font-family:inherit; font-size:13.5px; }
+  input,select,textarea{ width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); }
+  textarea{ min-height:60px; resize:vertical; }
+  button{ cursor:pointer; border:none; border-radius:8px; padding:10px 16px; font-weight:600; background:var(--paddy); color:var(--paper); }
+  button.secondary{ background:transparent; color:var(--paddy-deep); border:1px solid var(--line); }
+  button.danger{ background:var(--err); }
+  button:disabled{ opacity:.5; cursor:default; }
+
+  /* Login */
+  #loginScreen{ max-width:380px; margin:80px auto; background:var(--paper); border:1px solid var(--line); border-radius:16px; padding:32px; text-align:center; }
+  #loginScreen h1{ font-family:'Fraunces',serif; color:var(--paddy-deep); margin-top:0; }
+  #loginScreen .msg{ font-size:12.5px; color:var(--err); min-height:16px; margin-top:10px; }
+
+  /* Shell */
+  #shell{ display:none; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 22px; background:var(--ink); color:var(--husk-soft); }
+  .topbar .brand{ font-family:'Fraunces',serif; font-weight:600; color:var(--paper); }
+  .layout{ display:flex; min-height:calc(100vh - 52px); }
+  nav.side{ width:210px; flex:none; background:var(--paper); border-right:1px solid var(--line); padding:14px 0; }
+  nav.side .navgroup-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--soil); opacity:.7; padding:10px 18px 4px; }
+  nav.side a{ display:block; padding:9px 18px; font-size:13px; text-decoration:none; color:var(--ink); border-left:3px solid transparent; }
+  nav.side a.active{ background:var(--parchment); border-left-color:var(--paddy); font-weight:600; color:var(--paddy-deep); }
+  main{ flex:1; padding:24px 28px; max-width:900px; }
+  main h1{ font-family:'Fraunces',serif; color:var(--paddy-deep); margin-top:0; }
+
+  table{ width:100%; border-collapse:collapse; margin:16px 0 28px; font-size:12.5px; background:var(--paper); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  th,td{ padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; max-width:180px; overflow:hidden; text-overflow:ellipsis; }
+  th{ background:var(--parchment); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--soil); }
+  tr:last-child td{ border-bottom:none; }
+  td.actions button{ padding:4px 9px; font-size:11.5px; margin-right:4px; }
+
+  form.entity-form{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:18px; }
+  form.entity-form .grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  form.entity-form label{ display:block; font-size:11.5px; font-weight:600; color:var(--soil); margin-bottom:4px; }
+  form.entity-form .field{ margin-bottom:2px; }
+  form.entity-form .field.full{ grid-column:1 / -1; }
+  .status-msg{ font-size:12.5px; margin-top:10px; min-height:16px; }
+  .status-msg.ok{ color:var(--ok); }
+  .status-msg.err{ color:var(--err); }
+
+  .sync-box{ background:var(--paper); border:1px dashed var(--line); border-radius:12px; padding:20px; max-width:520px; }
+  .sync-box input[type=file]{ margin-bottom:12px; }
+  .summary-table{ margin-top:16px; }
+  .qr-result{ margin-top:16px; padding:14px; background:var(--husk-soft); border-radius:10px; }
+  .qr-result img{ max-width:160px; display:block; margin-top:8px; border-radius:8px; }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Upload Plot Shapefile (KML)</h1>
-  <form id="uploadForm">
-    <div class="form-group">
-      <label for="adminKey">Admin API Key</label>
-      <input type="password" id="adminKey" required placeholder="Enter admin password">
-    </div>
-    <div class="form-group">
-      <label for="batchId">Batch ID</label>
-      <input type="text" id="batchId" required placeholder="e.g. BATCH-2026-001">
-    </div>
-    <div class="form-group">
-      <label for="plotId">Plot ID</label>
-      <input type="text" id="plotId" required placeholder="e.g. P1 or 1">
-    </div>
-    <div class="form-group">
-      <label for="kmlFile">KML File</label>
-      <input type="file" id="kmlFile" accept=".kml" required>
-    </div>
-    <button type="submit" id="submitBtn">Upload Boundary</button>
-  </form>
-  <div id="status" class="status"></div>
+
+<div id="loginScreen">
+  <h1>Rice Trace Admin</h1>
+  <p style="font-size:13px;color:#665;">Enter the admin key to manage farmers, plots, and packaging records.</p>
+  <input type="password" id="adminKeyInput" placeholder="Admin key">
+  <div style="height:10px;"></div>
+  <button id="loginBtn" style="width:100%;">Log in</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<div id="shell">
+  <div class="topbar">
+    <span class="brand">Rice Trace — Admin</span>
+    <button class="secondary" id="logoutBtn" style="padding:6px 14px;">Log out</button>
+  </div>
+  <div class="layout">
+    <nav class="side" id="sideNav"></nav>
+    <main id="main"></main>
+  </div>
 </div>
 
 <script src="config.js"></script>
 <script>
-document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const submitBtn = document.getElementById('submitBtn');
-  const statusEl = document.getElementById('status');
-  
-  const adminKey = document.getElementById('adminKey').value.trim();
-  const batchId = document.getElementById('batchId').value.trim();
-  const plotId = document.getElementById('plotId').value.trim();
-  const kmlFile = document.getElementById('kmlFile').files[0];
-  
-  if (!kmlFile) return;
+const API = window.API_BASE_URL;
+let ADMIN_KEY = sessionStorage.getItem('riceTraceAdminKey') || '';
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Uploading...';
-  statusEl.className = 'status';
-  statusEl.textContent = '';
+// ---- Entity schema: mirrors backend/models/*.js. `ref` points at another
+// entity's key so its field renders as a <select> populated from that list.
+const ENTITIES = {
+  farmers: { label: 'Farmers', idField: 'farmer_id', path: 'farmers', fields: [
+    { name:'farmer_id', label:'Farmer ID', required:true },
+    { name:'name', label:'Name' }, { name:'photo', label:'Photo URL' },
+    { name:'gender', label:'Gender' }, { name:'age', label:'Age', type:'number' },
+    { name:'village', label:'Village' }, { name:'district', label:'District' }, { name:'state', label:'State' },
+    { name:'mobile', label:'Mobile' }, { name:'ics_group', label:'ICS Group' }, { name:'fpo', label:'FPO' },
+    { name:'certification', label:'Certification' }, { name:'experience_years', label:'Experience (yrs)', type:'number' },
+    { name:'training_attended', label:'Training Attended' }, { name:'bank_linked', label:'Bank Linked' },
+    { name:'story', label:'Farmer Story', type:'textarea', full:true }
+  ]},
+  plots: { label:'Farm Plots', idField:'plot_id', path:'plots', fields: [
+    { name:'plot_id', label:'Plot ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'survey_no', label:'Survey No' }, { name:'gps_lat', label:'GPS Lat', type:'number' }, { name:'gps_long', label:'GPS Long', type:'number' },
+    { name:'area_acres', label:'Area (Ac)', type:'number' }, { name:'soil_type', label:'Soil Type' }, { name:'previous_crop', label:'Previous Crop' },
+    { name:'irrigation', label:'Irrigation' }, { name:'water_source', label:'Water Source' }, { name:'slope', label:'Slope %', type:'number' },
+    { name:'organic_since', label:'Organic Since', type:'date' }, { name:'map_link', label:'Map Link', full:true }
+  ]},
+  'soil-health': { label:'Soil Health', idField:'sample_id', path:'soil-health', fields: [
+    { name:'sample_id', label:'Sample ID', required:true }, { name:'plot_id', label:'Plot', ref:'plots', required:true },
+    { name:'date', label:'Date', type:'date' }, { name:'pH', label:'pH', type:'number' }, { name:'EC', label:'EC', type:'number' },
+    { name:'OC', label:'OC', type:'number' }, { name:'CEC', label:'CEC', type:'number' }, { name:'N', label:'N', type:'number' },
+    { name:'P', label:'P', type:'number' }, { name:'K', label:'K', type:'number' }, { name:'lab', label:'Lab' }
+  ]},
+  'crop-cycles': { label:'Crop Cycles', idField:'crop_cycle_id', path:'crop-cycles', fields: [
+    { name:'crop_cycle_id', label:'Crop Cycle ID', required:true }, { name:'plot_id', label:'Plot', ref:'plots', required:true },
+    { name:'crop', label:'Crop' }, { name:'variety', label:'Variety' }, { name:'season', label:'Season' },
+    { name:'land_prep', label:'Land Prep', type:'date' }, { name:'nursery', label:'Nursery' }, { name:'sowing', label:'Sowing', type:'date' },
+    { name:'weeding', label:'Weeding', type:'date' }, { name:'flowering', label:'Flowering', type:'date' }, { name:'harvest', label:'Harvest', type:'date' }
+  ]},
+  inputs: { label:'Input Register', idField:'input_id', path:'inputs', fields: [
+    { name:'input_id', label:'Input ID', required:true }, { name:'plot_id', label:'Plot', ref:'plots', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'category', label:'Category' },
+    { name:'product', label:'Product' }, { name:'manufacturer', label:'Manufacturer' }, { name:'supplier', label:'Supplier' },
+    { name:'organic_cert', label:'Organic Cert' }, { name:'dose', label:'Dose', type:'number' }, { name:'unit', label:'Unit' },
+    { name:'application_date', label:'Application Date', type:'date' }, { name:'method', label:'Method' },
+    { name:'cost', label:'Cost', type:'number' }, { name:'operator', label:'Operator' }, { name:'remarks', label:'Remarks', full:true }
+  ]},
+  activities: { label:'Activity Log', idField:'activity_id', path:'activities', fields: [
+    { name:'activity_id', label:'Activity ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'date', label:'Date', type:'date' },
+    { name:'activity', label:'Activity' }, { name:'machine', label:'Machine' }, { name:'labour', label:'Labour', type:'number' },
+    { name:'hours', label:'Hours', type:'number' }, { name:'weather', label:'Weather' }, { name:'verified_by', label:'Verified By' },
+    { name:'description', label:'Description', type:'textarea', full:true }
+  ]},
+  'pest-disease': { label:'Pest & Disease', idField:'inspection_id', path:'pest-disease', fields: [
+    { name:'inspection_id', label:'Inspection ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'date', label:'Date', type:'date' },
+    { name:'pest', label:'Pest' }, { name:'disease', label:'Disease' }, { name:'severity', label:'Severity' },
+    { name:'organic_control', label:'Organic Control' }, { name:'dose', label:'Dose' }, { name:'follow_up', label:'Follow-up', type:'date' }
+  ]},
+  irrigation: { label:'Irrigation', idField:'record_id', path:'irrigation', fields: [
+    { name:'record_id', label:'Record ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'date', label:'Date', type:'date' },
+    { name:'method', label:'Method' }, { name:'water_source', label:'Water Source' }, { name:'hours', label:'Hours', type:'number' },
+    { name:'quantity', label:'Quantity' }, { name:'rainfall', label:'Rainfall' }
+  ]},
+  monitoring: { label:'Growth Monitoring', idField:'monitoring_id', path:'monitoring', fields: [
+    { name:'monitoring_id', label:'Monitoring ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'week', label:'Week', type:'number' },
+    { name:'plant_height', label:'Plant Height', type:'number' }, { name:'tillers', label:'Tillers', type:'number' },
+    { name:'ndvi', label:'NDVI', type:'number' }, { name:'spad', label:'SPAD', type:'number' }, { name:'remarks', label:'Remarks', full:true }
+  ]},
+  harvest: { label:'Harvest', idField:'harvest_id', path:'harvest', fields: [
+    { name:'harvest_id', label:'Harvest ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'date', label:'Date', type:'date' },
+    { name:'yield_kg', label:'Yield (kg)', type:'number' }, { name:'moisture', label:'Moisture', type:'number' },
+    { name:'harvest_method', label:'Harvest Method' }, { name:'storage', label:'Storage' }
+  ]},
+  processing: { label:'Processing', idField:'processing_id', path:'processing', fields: [
+    { name:'processing_id', label:'Processing ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'harvest_id', label:'Harvest', ref:'harvest', required:true }, { name:'drying_date', label:'Drying Date', type:'date' },
+    { name:'dry_moisture', label:'Dry Moisture', type:'number' }, { name:'milling', label:'Milling' }, { name:'sorting', label:'Sorting' },
+    { name:'grading', label:'Grading' }, { name:'packing_date', label:'Packing Date', type:'date' }, { name:'recovery_pct', label:'Recovery %', type:'number' }
+  ]},
+  'lab-testing': { label:'Lab Testing', idField:'test_id', path:'lab-testing', fields: [
+    { name:'test_id', label:'Test ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'batch_id', label:'Batch (Packaging)', ref:'packaging', required:true }, { name:'protein', label:'Protein', type:'number' },
+    { name:'fiber', label:'Fiber', type:'number' }, { name:'moisture', label:'Moisture', type:'number' }, { name:'ash', label:'Ash', type:'number' },
+    { name:'heavy_metals', label:'Heavy Metals' }, { name:'pesticides', label:'Pesticides' }, { name:'microbiology', label:'Microbiology' },
+    { name:'lab_report', label:'Lab Report', full:true }
+  ]},
+  dispatch: { label:'Dispatch', idField:'dispatch_id', path:'dispatch', fields: [
+    { name:'dispatch_id', label:'Dispatch ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'batch_id', label:'Batch (Packaging)', ref:'packaging', required:true }, { name:'buyer', label:'Buyer' },
+    { name:'destination', label:'Destination' }, { name:'vehicle', label:'Vehicle' }, { name:'container', label:'Container' },
+    { name:'dispatch_date', label:'Dispatch Date', type:'date' }, { name:'invoice', label:'Invoice' }, { name:'bl', label:'BL' }
+  ]},
+  sustainability: { label:'Sustainability', idField:'record_id', path:'sustainability', fields: [
+    { name:'record_id', label:'Record ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'crop_cycle_id', label:'Crop Cycle', ref:'crop-cycles', required:true }, { name:'basalt_applied', label:'Basalt Applied' },
+    { name:'co2_removal', label:'CO2 Removal', type:'number' }, { name:'water_retention', label:'Water Retention' },
+    { name:'biodiversity', label:'Biodiversity' }, { name:'trees', label:'Trees', type:'number' }, { name:'pollinators', label:'Pollinators', type:'number' }
+  ]},
+  packaging: { label:'Packaging (QR)', idField:'batch_id', path:'packaging', fields: [
+    { name:'batch_id', label:'Batch ID', required:true }, { name:'farmer_id', label:'Farmer', ref:'farmers', required:true },
+    { name:'sku', label:'SKU', required:true }, { name:'pack_size', label:'Pack Size', required:true },
+    { name:'pack_date', label:'Pack Date', type:'date', required:true }, { name:'expiry', label:'Expiry', type:'date' },
+    { name:'operator', label:'Operator' }, { name:'qr_code', label:'QR Code (leave blank to auto-generate)' }
+  ]}
+};
 
-  const formData = new FormData();
-  formData.append('kml', kmlFile);
+function api(path, opts={}){
+  return fetch(`${API}${path}`, {
+    ...opts,
+    headers: { ...(opts.body && !(opts.body instanceof FormData) ? {'Content-Type':'application/json'} : {}), 'x-admin-key': ADMIN_KEY, ...(opts.headers||{}) }
+  });
+}
 
-  try {
-    const url = `${window.API_BASE_URL}/api/batches/${encodeURIComponent(batchId)}/plots/${encodeURIComponent(plotId)}/boundary`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'x-admin-key': adminKey
-      },
-      body: formData
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      statusEl.className = 'status success';
-      statusEl.textContent = `Success! Plot boundary updated for Plot ID ${data.plot_id}.`;
-      document.getElementById('uploadForm').reset();
-    } else {
-      statusEl.className = 'status error';
-      statusEl.textContent = `Error: ${data.error || 'Upload failed'}`;
-    }
-  } catch (err) {
-    statusEl.className = 'status error';
-    statusEl.textContent = 'A network error occurred while uploading.';
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Upload Boundary';
+// ---- Login -----------------------------------------------------------
+async function tryLogin(key){
+  const res = await fetch(`${API}/api/admin/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key}) });
+  return res.ok;
+}
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const key = document.getElementById('adminKeyInput').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if(!key) return;
+  msg.textContent = 'Checking…';
+  const ok = await tryLogin(key);
+  if(ok){
+    ADMIN_KEY = key;
+    sessionStorage.setItem('riceTraceAdminKey', key);
+    showShell();
+  } else {
+    msg.textContent = 'Incorrect key.';
   }
 });
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  sessionStorage.removeItem('riceTraceAdminKey');
+  location.reload();
+});
+
+// ---- Shell / nav -------------------------------------------------------
+function buildNav(){
+  const nav = document.getElementById('sideNav');
+  let html = `<div class="navgroup-label">Data entry</div>`;
+  Object.keys(ENTITIES).forEach(key => {
+    html += `<a href="#${key}" data-key="${key}">${ENTITIES[key].label}</a>`;
+  });
+  html += `<div class="navgroup-label">Bulk sync</div>
+    <a href="#sync-excel" data-key="sync-excel">Excel Sync</a>
+    <a href="#sync-kmz" data-key="sync-kmz">KMZ Boundary Sync</a>`;
+  nav.innerHTML = html;
+  nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => route(a.dataset.key)));
+}
+
+function showShell(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('shell').style.display = 'block';
+  buildNav();
+  route(location.hash.replace('#','') || 'farmers');
+}
+
+function route(key){
+  document.querySelectorAll('nav.side a').forEach(a => a.classList.toggle('active', a.dataset.key === key));
+  location.hash = key;
+  if(key === 'sync-excel') return renderExcelSync();
+  if(key === 'sync-kmz') return renderKmzSync();
+  renderEntity(key);
+}
+
+// ---- Generic entity list + form ---------------------------------------
+const refCache = {};
+async function fetchList(key){
+  if(refCache[key]) return refCache[key];
+  const res = await api(`/api/admin/${ENTITIES[key].path}`);
+  const data = res.ok ? await res.json() : [];
+  refCache[key] = data;
+  return data;
+}
+
+async function renderEntity(key){
+  const cfg = ENTITIES[key];
+  const main = document.getElementById('main');
+  main.innerHTML = `<h1>${cfg.label}</h1><div id="tableWrap">Loading…</div><h2 style="font-family:'Fraunces',serif;color:var(--paddy-deep);font-size:16px;">Add new</h2><form class="entity-form" id="entityForm"></form><div class="status-msg" id="formMsg"></div>`;
+
+  // Build form fields, resolving ref dropdowns first.
+  const form = document.getElementById('entityForm');
+  let gridHtml = '<div class="grid">';
+  for(const f of cfg.fields){
+    const fullClass = f.full ? ' full' : '';
+    let inputHtml;
+    if(f.ref){
+      inputHtml = `<select name="${f.name}" ${f.required?'required':''}><option value="">Select ${ENTITIES[f.ref].label.slice(0,-1) || f.ref}…</option></select>`;
+    } else if(f.type === 'textarea'){
+      inputHtml = `<textarea name="${f.name}"></textarea>`;
+    } else {
+      inputHtml = `<input type="${f.type || 'text'}" name="${f.name}" ${f.required?'required':''}>`;
+    }
+    gridHtml += `<div class="field${fullClass}"><label>${f.label}${f.required?' *':''}</label>${inputHtml}</div>`;
+  }
+  gridHtml += '</div>';
+  form.innerHTML = gridHtml + `<div style="margin-top:14px;"><button type="submit">Save</button></div>`;
+
+  for(const f of cfg.fields){
+    if(f.ref){
+      const list = await fetchList(f.ref);
+      const sel = form.querySelector(`[name="${f.name}"]`);
+      const idF = ENTITIES[f.ref].idField;
+      list.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item[idF];
+        opt.textContent = `${item[idF]}${item.name ? ' — ' + item.name : ''}`;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('formMsg');
+    const body = {};
+    new FormData(form).forEach((v,k) => { if(v !== '') body[k] = v; });
+    msg.textContent = 'Saving…'; msg.className = 'status-msg';
+    const res = await api(`/api/admin/${cfg.path}`, { method:'POST', body: JSON.stringify(body) });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok){
+      msg.textContent = 'Saved.'; msg.className = 'status-msg ok';
+      if(key === 'packaging' && data.qr_code){
+        msg.innerHTML = `Saved. QR code <b>${data.qr_code}</b> generated.` +
+          `<div class="qr-result">Trace URL: <a href="${data.qr_url}" target="_blank">${data.qr_url}</a>` +
+          (data.qr_image_path ? `<img src="${API}${data.qr_image_path}" alt="QR code">` : '') + `</div>`;
+      }
+      form.reset();
+      delete refCache[key];
+      loadTable();
+    } else {
+      msg.textContent = data.error || 'Save failed.'; msg.className = 'status-msg err';
+    }
+  });
+
+  async function loadTable(){
+    const list = await (async () => { delete refCache[key]; return fetchList(key); })();
+    const wrap = document.getElementById('tableWrap');
+    if(!list.length){ wrap.innerHTML = '<p style="font-size:13px;color:#665;">No records yet.</p>'; return; }
+    const cols = cfg.fields.map(f => f.name).slice(0, 6);
+    wrap.innerHTML = `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}<th></th></tr></thead><tbody>
+      ${list.map(row => `<tr>${cols.map(c=>`<td>${row[c] ?? ''}</td>`).join('')}<td class="actions"><button class="danger" data-del="${row[cfg.idField]}">Delete</button></td></tr>`).join('')}
+      </tbody></table>`;
+    wrap.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if(!confirm('Delete this record?')) return;
+        await api(`/api/admin/${cfg.path}/${encodeURIComponent(btn.dataset.del)}`, { method:'DELETE' });
+        renderEntity(key);
+      });
+    });
+  }
+  loadTable();
+}
+
+// ---- Bulk sync views ----------------------------------------------------
+function renderExcelSync(){
+  document.getElementById('main').innerHTML = `
+    <h1>Excel Sync</h1>
+    <p style="font-size:13px;color:#665;max-width:520px;">Upload the latest <code>database.xlsx</code>. Only rows whose ID doesn't already exist in the database are added — existing records are never overwritten, so it's safe to re-run after adding new rows.</p>
+    <div class="sync-box">
+      <input type="file" id="excelFile" accept=".xlsx">
+      <button id="excelSyncBtn">Sync</button>
+      <div class="status-msg" id="excelMsg"></div>
+      <div id="excelSummary"></div>
+    </div>`;
+  document.getElementById('excelSyncBtn').addEventListener('click', async () => {
+    const file = document.getElementById('excelFile').files[0];
+    const msg = document.getElementById('excelMsg');
+    if(!file){ msg.textContent = 'Choose a file first.'; msg.className='status-msg err'; return; }
+    msg.textContent = 'Syncing… this can take a minute.'; msg.className='status-msg';
+    const fd = new FormData(); fd.append('excel', file);
+    const res = await api('/api/admin/sync-excel', { method:'POST', body: fd });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok){
+      msg.textContent = 'Sync complete.'; msg.className='status-msg ok';
+      document.getElementById('excelSummary').innerHTML = `<table class="summary-table"><thead><tr><th>Sheet</th><th>Created</th><th>Skipped</th></tr></thead><tbody>
+        ${data.summary.map(s=>`<tr><td>${s.sheet}</td><td>${s.created}</td><td>${s.skipped}${s.error?' — '+s.error:''}</td></tr>`).join('')}
+        </tbody></table>`;
+      Object.keys(refCache).forEach(k => delete refCache[k]);
+    } else {
+      msg.textContent = data.error || 'Sync failed.'; msg.className='status-msg err';
+    }
+  });
+}
+
+function renderKmzSync(){
+  document.getElementById('main').innerHTML = `
+    <h1>KMZ Boundary Sync</h1>
+    <p style="font-size:13px;color:#665;max-width:520px;">Upload the plot boundary <code>.kmz</code>. Each placemark's name is matched against a Plot's Plot ID — no need to upload one file per plot.</p>
+    <div class="sync-box">
+      <input type="file" id="kmzFile" accept=".kmz">
+      <button id="kmzSyncBtn">Sync</button>
+      <div class="status-msg" id="kmzMsg"></div>
+      <div id="kmzSummary"></div>
+    </div>`;
+  document.getElementById('kmzSyncBtn').addEventListener('click', async () => {
+    const file = document.getElementById('kmzFile').files[0];
+    const msg = document.getElementById('kmzMsg');
+    if(!file){ msg.textContent = 'Choose a file first.'; msg.className='status-msg err'; return; }
+    msg.textContent = 'Matching plots…'; msg.className='status-msg';
+    const fd = new FormData(); fd.append('kmz', file);
+    const res = await api('/api/admin/sync-kmz', { method:'POST', body: fd });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok){
+      msg.textContent = `Matched ${data.matched.length}, unmatched ${data.unmatched.length}.`; msg.className='status-msg ok';
+      document.getElementById('kmzSummary').innerHTML = `
+        <p style="font-size:12.5px;margin-top:12px;"><b>Matched:</b> ${data.matched.join(', ') || '—'}</p>
+        <p style="font-size:12.5px;"><b>Unmatched:</b> ${data.unmatched.map(u=>u.plot_id || u.reason).join(', ') || '—'}</p>`;
+    } else {
+      msg.textContent = data.error || 'Sync failed.'; msg.className='status-msg err';
+    }
+  });
+}
+
+// ---- Boot ----------------------------------------------------------------
+if(ADMIN_KEY){
+  tryLogin(ADMIN_KEY).then(ok => ok ? showShell() : (sessionStorage.removeItem('riceTraceAdminKey'), ADMIN_KEY=''));
+}
+window.addEventListener('hashchange', () => { if(document.getElementById('shell').style.display==='block') route(location.hash.replace('#','')); });
 </script>
 </body>
 </html>

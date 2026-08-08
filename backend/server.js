@@ -4,16 +4,18 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
 
-const batchRoutes = require('./routes/batches');
+const traceRoutes = require('./routes/trace');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 app.use(cors()); // Netlify frontend is a different origin — this must stay open for the public GET route
 app.use(express.json());
 
-// Serve generated QR PNGs statically, e.g. GET /qr_output/BATCH-2026-040.png
+// Serve generated QR PNGs statically, e.g. GET /qr_output/QR-040-2026.png
 app.use('/qr_output', express.static(path.join(__dirname, 'qr_output')));
 
-app.use('/api/batches', batchRoutes);
+app.use('/api/trace', traceRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
