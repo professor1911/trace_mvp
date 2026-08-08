@@ -32,6 +32,17 @@ function num(v) {
   return Number.isNaN(n) ? null : n;
 }
 
+// The sheet uses the literal text "None" as its own empty marker in several
+// columns (e.g. Pest_Disease's Pest/Disease/Follow-up) — normalize it to a
+// real null before mapping, otherwise it fails Date casts and pollutes text fields.
+function cleanRow(raw) {
+  const cleaned = {};
+  for (const [k, v] of Object.entries(raw)) {
+    cleaned[k] = (typeof v === 'string' && v.trim() === 'None') ? null : v;
+  }
+  return cleaned;
+}
+
 // One entry per sheet: which model+idField it upserts into, and how a raw
 // sheet_to_json row (keyed by exact Excel header text) maps to the schema.
 const SHEETS = [
@@ -191,19 +202,27 @@ async function importWorkbook(buffer) {
     }
     const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
     let created = 0, skipped = 0, invalid = 0;
+    const errors = [];
 
     for (const raw of rows) {
-      const doc = map(raw);
-      const idValue = doc[idField];
-      if (!idValue) { invalid++; continue; }
+      let doc;
+      try {
+        doc = map(cleanRow(raw));
+        const idValue = doc[idField];
+        if (!idValue) { invalid++; continue; }
 
-      const existing = await Model.findOne({ [idField]: idValue });
-      if (existing) { skipped++; continue; }
+        const existing = await Model.findOne({ [idField]: idValue });
+        if (existing) { skipped++; continue; }
 
-      await Model.create(doc);
-      created++;
+        await Model.create(doc);
+        created++;
+      } catch (err) {
+        // One bad row (duplicate key, validation error) must not abort the
+        // rest of this sheet or every sheet queued behind it.
+        errors.push({ id: doc ? doc[idField] : null, message: err.message });
+      }
     }
-    summary.push({ sheet, created, skipped, invalid });
+    summary.push({ sheet, created, skipped, invalid, errors: errors.length, errorSamples: errors.slice(0, 5) });
   }
 
   return summary;
