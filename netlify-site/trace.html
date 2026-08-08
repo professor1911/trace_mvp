@@ -82,7 +82,7 @@
   const batchId = params.get('batch');
 
   if(!batchId){
-    app.innerHTML = `<div class="not-found"><h1>No batch code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="scan.html">scan one now</a>.</p></div>`;
+    app.innerHTML = `<div class="not-found"><h1>No batch code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="index.html">scan one now</a>.</p></div>`;
     return;
   }
 
@@ -195,7 +195,7 @@
   app.innerHTML = `
     <div class="topbar">
       <span class="brand">Rice Trace</span>
-      <a class="scan-link" href="scan.html">Scan another</a>
+      <a class="scan-link" href="index.html">Scan another</a>
     </div>
     <section class="hero">
       <p class="eyebrow">Batch ${record.batch_id} · ${record.product_name || ''}</p>
