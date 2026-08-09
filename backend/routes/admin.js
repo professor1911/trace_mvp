@@ -109,16 +109,20 @@ packagingRouter.delete('/:id', requireAdmin, async (req, res) => {
 router.use('/packaging', packagingRouter);
 
 /**
- * INTERNAL — upload the (re-exported) database.xlsx. Append-only: rows whose
- * ID already exists in the DB are left untouched, matches "I will only be
- * adding new rows, never editing existing ones".
- * POST /api/admin/sync-excel  multipart field "excel"
+ * INTERNAL — upload the (re-exported) database.xlsx.
+ * mode=append (default): rows whose ID already exists in the DB are left untouched.
+ * mode=update: existing rows are merge-updated from non-blank cells only —
+ * lets you fix a typo/edit a value for an existing farmer/plot/etc. without
+ * risking blank cells (e.g. Photo, left blank in the sheet on purpose)
+ * wiping out fields set elsewhere, like the admin form or linkFarmerPhotos.js.
+ * POST /api/admin/sync-excel  multipart field "excel", optional field "mode"
  */
 router.post('/sync-excel', requireAdmin, upload.single('excel'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'no file uploaded, expected field name "excel"' });
-    const summary = await importWorkbook(req.file.buffer);
-    res.json({ message: 'Excel sync complete', summary });
+    const mode = req.body.mode === 'update' ? 'update' : 'append';
+    const summary = await importWorkbook(req.file.buffer, { mode });
+    res.json({ message: 'Excel sync complete', mode, summary });
   } catch (err) {
     res.status(500).json({ error: 'server_error', detail: err.message });
   }

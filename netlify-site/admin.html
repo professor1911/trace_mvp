@@ -350,25 +350,30 @@ async function renderEntity(key){
 function renderExcelSync(){
   document.getElementById('main').innerHTML = `
     <h1>Excel Sync</h1>
-    <p style="font-size:13px;color:#665;max-width:520px;">Upload the latest <code>database.xlsx</code>. Only rows whose ID doesn't already exist in the database are added — existing records are never overwritten, so it's safe to re-run after adding new rows.</p>
+    <p style="font-size:13px;color:#665;max-width:520px;">Upload the latest <code>database.xlsx</code>. By default only new rows (an ID not already in the database) are added.</p>
     <div class="sync-box">
       <input type="file" id="excelFile" accept=".xlsx">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:14px;cursor:pointer;">
+        <input type="checkbox" id="updateModeCheck" style="width:auto;">
+        Also update existing rows (only fills in cells you've edited — blank cells never erase existing data, e.g. a photo set separately)
+      </label>
       <button id="excelSyncBtn">Sync</button>
       <div class="status-msg" id="excelMsg"></div>
       <div id="excelSummary"></div>
     </div>`;
   document.getElementById('excelSyncBtn').addEventListener('click', async () => {
     const file = document.getElementById('excelFile').files[0];
+    const mode = document.getElementById('updateModeCheck').checked ? 'update' : 'append';
     const msg = document.getElementById('excelMsg');
     if(!file){ msg.textContent = 'Choose a file first.'; msg.className='status-msg err'; return; }
     msg.textContent = 'Syncing… this can take a minute.'; msg.className='status-msg';
-    const fd = new FormData(); fd.append('excel', file);
+    const fd = new FormData(); fd.append('excel', file); fd.append('mode', mode);
     const res = await api('/api/admin/sync-excel', { method:'POST', body: fd });
     const data = await res.json().catch(()=>({}));
     if(res.ok){
-      msg.textContent = 'Sync complete.'; msg.className='status-msg ok';
-      document.getElementById('excelSummary').innerHTML = `<table class="summary-table"><thead><tr><th>Sheet</th><th>Created</th><th>Skipped</th><th>Errors</th></tr></thead><tbody>
-        ${data.summary.map(s=>`<tr><td>${s.sheet}</td><td>${s.created}</td><td>${s.skipped}${s.error?' — '+s.error:''}</td><td>${s.errors ? s.errors + (s.errorSamples&&s.errorSamples.length ? ': ' + s.errorSamples.map(e=>`${e.id||'?'} (${e.message})`).join('; ') : '') : 0}</td></tr>`).join('')}
+      msg.textContent = `Sync complete (${data.mode} mode).`; msg.className='status-msg ok';
+      document.getElementById('excelSummary').innerHTML = `<table class="summary-table"><thead><tr><th>Sheet</th><th>Created</th><th>Updated</th><th>Skipped</th><th>Errors</th></tr></thead><tbody>
+        ${data.summary.map(s=>`<tr><td>${s.sheet}</td><td>${s.created}</td><td>${s.updated||0}</td><td>${s.skipped}${s.error?' — '+s.error:''}</td><td>${s.errors ? s.errors + (s.errorSamples&&s.errorSamples.length ? ': ' + s.errorSamples.map(e=>`${e.id||'?'} (${e.message})`).join('; ') : '') : 0}</td></tr>`).join('')}
         </tbody></table>`;
       Object.keys(refCache).forEach(k => delete refCache[k]);
     } else {

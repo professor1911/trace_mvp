@@ -187,10 +187,17 @@ const SHEETS = [
 ];
 
 /**
- * Append-only sync: a row whose id already exists in the DB is left alone
- * (matches "I will only be adding new rows, never editing existing ones").
+ * mode 'append' (default): a row whose id already exists in the DB is left
+ * alone entirely — matches "I will only be adding new rows".
+ *
+ * mode 'update': existing rows are merge-updated instead of skipped, but
+ * only cells that are non-blank in the sheet get applied ($set on those keys
+ * only). A blank cell never erases a value already in Mongo — this is what
+ * protects fields like Farmer.photo (set manually, blank in the sheet) from
+ * being wiped out when someone edits an unrelated column like Farmer Story
+ * and re-syncs.
  */
-async function importWorkbook(buffer) {
+async function importWorkbook(buffer, { mode = 'append' } = {}) {
   const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
   const summary = [];
 
@@ -201,7 +208,7 @@ async function importWorkbook(buffer) {
       continue;
     }
     const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
-    let created = 0, skipped = 0, invalid = 0;
+    let created = 0, skipped = 0, updated = 0, invalid = 0;
     const errors = [];
 
     for (const raw of rows) {
@@ -212,7 +219,21 @@ async function importWorkbook(buffer) {
         if (!idValue) { invalid++; continue; }
 
         const existing = await Model.findOne({ [idField]: idValue });
-        if (existing) { skipped++; continue; }
+        if (existing) {
+          if (mode !== 'update') { skipped++; continue; }
+          const nonBlank = {};
+          for (const [k, v] of Object.entries(doc)) {
+            if (v !== null && v !== undefined && v !== '') nonBlank[k] = v;
+          }
+          delete nonBlank[idField];
+          if (Object.keys(nonBlank).length) {
+            await Model.updateOne({ [idField]: idValue }, { $set: nonBlank });
+            updated++;
+          } else {
+            skipped++;
+          }
+          continue;
+        }
 
         await Model.create(doc);
         created++;
@@ -222,7 +243,7 @@ async function importWorkbook(buffer) {
         errors.push({ id: doc ? doc[idField] : null, message: err.message });
       }
     }
-    summary.push({ sheet, created, skipped, invalid, errors: errors.length, errorSamples: errors.slice(0, 5) });
+    summary.push({ sheet, created, updated, skipped, invalid, errors: errors.length, errorSamples: errors.slice(0, 5) });
   }
 
   return summary;
