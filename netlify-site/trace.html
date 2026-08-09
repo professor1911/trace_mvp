@@ -1,143 +1,513 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mati Foods — Field to Pack</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<style>
-  :root{
-    --ink:#16241C; --paddy:#3B6E4E; --paddy-deep:#254B33; --husk:#C79A3D; --husk-soft:#E9D9AE;
-    --parchment:#F6F2E6; --paper:#FFFDF8; --soil:#6B4A2F; --line:#DCD3BE;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{ background:var(--parchment); color:var(--ink); font-family:'IBM Plex Sans', sans-serif; -webkit-font-smoothing:antialiased; }
-  .app{ max-width:480px; margin:0 auto; min-height:100vh; background:var(--paper); }
-  a.scan-link{ color:inherit; }
-
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:var(--ink); color:var(--husk-soft); position:sticky; top:0; z-index:5; }
-  .topbar .brand{ display:flex; align-items:center; gap:9px; }
-  .topbar .brand img{ height:26px; }
-  .topbar .brand-text{ display:flex; flex-direction:column; line-height:1.15; }
-  .topbar .brand-text .name{ font-family:'Fraunces',serif; font-weight:600; font-size:14px; color:var(--paper); }
-  .topbar .brand-text .tagline{ font-size:9.5px; letter-spacing:.03em; color:var(--husk-soft); opacity:.85; }
-  .topbar a{ font-size:12.5px; text-decoration:none; color:var(--husk); border:1px solid rgba(199,154,61,0.5); padding:6px 12px; border-radius:100px; }
-
-  .hero{ background:linear-gradient(180deg, var(--paddy-deep) 0%, var(--paddy) 100%); color:var(--paper); padding:22px 22px 20px; }
-  .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--husk-soft); opacity:.9; margin:0 0 8px; }
-  .hero h1{ font-family:'Fraunces', serif; font-weight:500; font-size:clamp(22px,6vw,26px); line-height:1.15; margin:0; letter-spacing:-.01em; }
-
-  .progress-rail{ display:flex; gap:4px; padding:14px 20px 0; }
-  .progress-dot{ flex:1; height:4px; border-radius:4px; background:var(--line); }
-  .progress-dot.done{ background:var(--paddy); }
-
-  .section{ padding:22px 20px; border-bottom:1px solid var(--line); }
-  .section h2{ font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin:0 0 4px; color:var(--paddy-deep); }
-  .section .section-sub{ font-size:12.5px; color:var(--soil); opacity:.8; margin:0 0 16px; }
-
-  .profile-card{ display:flex; gap:16px; align-items:flex-start; }
-  .avatar{ width:84px; height:84px; border-radius:16px; flex:none; object-fit:cover; background:var(--husk-soft); }
-  .avatar-fallback{
-    width:84px; height:84px; border-radius:16px; flex:none; background:var(--husk); color:var(--paddy-deep);
-    display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:600; font-size:28px;
-  }
-  .profile-meta .name{ font-family:'Fraunces',serif; font-weight:600; font-size:19px; }
-  .profile-meta .loc{ font-size:13px; color:var(--soil); margin-top:2px; }
-  .profile-story{ font-size:14px; line-height:1.6; margin-top:14px; color:#3a3630; }
-  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-  .chip{ font-size:12px; background:var(--husk-soft); color:var(--soil); padding:5px 11px; border-radius:100px; font-weight:500; }
-  .kv-list{ margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .kv{ background:var(--parchment); border:1px solid var(--line); border-radius:10px; padding:9px 11px; }
-  .kv .k{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--soil); opacity:.75; }
-  .kv .v{ font-size:13.5px; font-weight:500; margin-top:2px; }
-
-  .plot-tabs{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
-  .plot-tab{ font-size:12.5px; padding:6px 12px; border-radius:100px; border:1px solid var(--line); background:var(--paper); cursor:pointer; font-weight:500; }
-  .plot-tab.active{ background:var(--paddy); color:var(--paper); border-color:var(--paddy); }
-  #map{ height:220px; border-radius:14px; border:1px solid var(--line); background:var(--parchment); }
-  .map-empty{ height:220px; border-radius:14px; border:1px dashed var(--line); background:var(--parchment); display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; font-size:12.5px; color:var(--soil); }
-  .plot-detail{ margin-top:14px; }
-
-  /* Interactive journey timeline */
-  .timeline{ position:relative; padding-left:26px; }
-  .timeline::before{ content:''; position:absolute; left:9px; top:6px; bottom:6px; width:2px; background:var(--line); }
-  .stage{ position:relative; margin-bottom:10px; }
-  .stage-dot{ position:absolute; left:-26px; top:16px; width:18px; height:18px; border-radius:50%; background:var(--paper); border:2px solid var(--husk); }
-  .stage.has-data .stage-dot{ background:var(--paddy); border-color:var(--paddy); }
-  .stage-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; background:var(--parchment); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
-  .stage-head:hover{ border-color:var(--husk); }
-  .stage-title{ font-weight:600; font-size:14px; }
-  .stage-count{ font-size:11px; color:var(--soil); opacity:.75; margin-top:2px; }
-  .stage-chevron{ transition:transform .2s; color:var(--soil); font-size:13px; flex:none; }
-  .stage.open .stage-chevron{ transform:rotate(180deg); }
-  .stage-body{ display:none; padding:14px 4px 4px; }
-  .stage.open .stage-body{ display:block; }
-
-  .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-  .field-grid .kv .v{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; word-break:break-word; }
-  .record-row{ background:var(--parchment); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:12.5px; }
-  .record-row .rk{ color:var(--soil); }
-  .empty-note{ font-size:12.5px; color:var(--soil); opacity:.8; padding:6px 2px; }
-
-  footer.provenance{ padding:20px; background:var(--ink); color:var(--husk-soft); }
-  footer.provenance .batch{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; }
-  footer.provenance .fine{ font-size:11px; opacity:.6; margin-top:8px; line-height:1.5; }
-
-  .not-found, .loading-msg{ padding:60px 24px; text-align:center; }
-  .not-found h1{ font-family:'Fraunces',serif; font-size:22px; }
-  .not-found p, .loading-msg p{ font-size:14px; color:#665; }
-</style>
-</head>
-<body>
-<div id="app" class="app">
-  <div class="loading-msg"><img src="logo.png" alt="Mati Foods" style="height:32px;margin-bottom:14px;"><p>Loading this batch's story…</p></div>
-</div>
-
-<script src="config.js"></script>
-<script>
-(async function(){
-  const app = document.getElementById('app');
-  const params = new URLSearchParams(window.location.search);
-  const qrCode = params.get('qr') || params.get('batch');
-
-  if(!qrCode){
-    app.innerHTML = `<div class="not-found"><h1>No QR code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="index.html">scan one now</a>.</p></div>`;
-    return;
-  }
-
-  let data;
-  try{
-    const res = await fetch(`${window.API_BASE_URL}/api/trace/${encodeURIComponent(qrCode)}`);
-    if(res.status === 404){
-      app.innerHTML = `<div class="not-found"><h1>We couldn't find that code</h1><p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p></div>`;
-      return;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mati Foods</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    :root {
+      --ink: #16241C;
+      --paddy: #3B6E4E;
+      --paddy-deep: #254B33;
+      --husk: #C79A3D;
+      --husk-soft: #E9D9AE;
+      --parchment: #F6F2E6;
+      --paper: #FFFDF8;
+      --soil: #6B4A2F;
+      --line: #DCD3BE;
     }
-    if(!res.ok) throw new Error('API error: ' + res.status);
-    data = await res.json();
-  }catch(err){
-    app.innerHTML = `<div class="not-found"><h1>Couldn't load this batch right now</h1><p>There may be a connection issue. Please try scanning again in a moment.</p></div>`;
-    return;
-  }
 
-  const { packaging, farmer, plots = [], crop_cycles = [], inputs = [], activities = [],
-          pest_disease = [], irrigation = [], monitoring = [], sustainability = [],
-          harvest = [], processing = [], lab_testing = [], dispatch = [] } = data;
-  const fp = farmer || {};
-  const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
-  const initials = (fp.name || '?').split(' ').map(w=>w[0]).slice(0,2).join('');
+    * {
+      box-sizing: border-box;
+    }
 
-  const avatarHtml = fp.photo
-    ? `<img class="avatar" src="${fp.photo}" alt="${fp.name || 'Farmer'}">`
-    : `<div class="avatar-fallback">${initials}</div>`;
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-  const certChips = (fp.certification ? [fp.certification] : []).map(c => `<span class="chip">${c}</span>`).join('');
-  const fpoChip = fp.fpo ? `<span class="chip">${fp.fpo}</span>` : '';
-  const icsChip = fp.ics_group ? `<span class="chip">${fp.ics_group}</span>` : '';
+    body {
+      background: var(--parchment);
+      color: var(--ink);
+      font-family: 'IBM Plex Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  const section1 = `
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--paper);
+    }
+
+    a.scan-link {
+      color: inherit;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--ink);
+      color: var(--husk-soft);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .topbar .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .topbar .brand img {
+      height: 26px;
+    }
+
+    .topbar .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .topbar .brand-text .name {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--paper);
+    }
+
+    .topbar .brand-text .tagline {
+      font-size: 9.5px;
+      letter-spacing: .03em;
+      color: var(--husk-soft);
+      opacity: .85;
+    }
+
+    .topbar a {
+      font-size: 12.5px;
+      text-decoration: none;
+      color: var(--husk);
+      border: 1px solid rgba(199, 154, 61, 0.5);
+      padding: 6px 12px;
+      border-radius: 100px;
+    }
+
+    .hero {
+      background: linear-gradient(180deg, var(--paddy-deep) 0%, var(--paddy) 100%);
+      color: var(--paper);
+      padding: 22px 22px 20px;
+    }
+
+    .eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--husk-soft);
+      opacity: .9;
+      margin: 0 0 8px;
+    }
+
+    .hero h1 {
+      font-family: 'Fraunces', serif;
+      font-weight: 500;
+      font-size: clamp(22px, 6vw, 26px);
+      line-height: 1.15;
+      margin: 0;
+      letter-spacing: -.01em;
+    }
+
+    .progress-rail {
+      display: flex;
+      gap: 4px;
+      padding: 14px 20px 0;
+    }
+
+    .progress-dot {
+      flex: 1;
+      height: 4px;
+      border-radius: 4px;
+      background: var(--line);
+    }
+
+    .progress-dot.done {
+      background: var(--paddy);
+    }
+
+    .section {
+      padding: 22px 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section h2 {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 18px;
+      margin: 0 0 4px;
+      color: var(--paddy-deep);
+    }
+
+    .section .section-sub {
+      font-size: 12.5px;
+      color: var(--soil);
+      opacity: .8;
+      margin: 0 0 16px;
+    }
+
+    .profile-card {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .avatar {
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      flex: none;
+      object-fit: cover;
+      background: var(--husk-soft);
+    }
+
+    .avatar-fallback {
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      flex: none;
+      background: var(--husk);
+      color: var(--paddy-deep);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 28px;
+    }
+
+    .profile-meta .name {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 19px;
+    }
+
+    .profile-meta .loc {
+      font-size: 13px;
+      color: var(--soil);
+      margin-top: 2px;
+    }
+
+    .profile-story {
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 14px;
+      color: #3a3630;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      font-size: 12px;
+      background: var(--husk-soft);
+      color: var(--soil);
+      padding: 5px 11px;
+      border-radius: 100px;
+      font-weight: 500;
+    }
+
+    .kv-list {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .kv {
+      background: var(--parchment);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 11px;
+    }
+
+    .kv .k {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--soil);
+      opacity: .75;
+    }
+
+    .kv .v {
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .plot-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .plot-tab {
+      font-size: 12.5px;
+      padding: 6px 12px;
+      border-radius: 100px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .plot-tab.active {
+      background: var(--paddy);
+      color: var(--paper);
+      border-color: var(--paddy);
+    }
+
+    #map {
+      height: 220px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--parchment);
+    }
+
+    .map-empty {
+      height: 220px;
+      border-radius: 14px;
+      border: 1px dashed var(--line);
+      background: var(--parchment);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      font-size: 12.5px;
+      color: var(--soil);
+    }
+
+    .plot-detail {
+      margin-top: 14px;
+    }
+
+    /* Interactive journey timeline */
+    .timeline {
+      position: relative;
+      padding-left: 26px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 9px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: var(--line);
+    }
+
+    .stage {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .stage-dot {
+      position: absolute;
+      left: -26px;
+      top: 16px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--paper);
+      border: 2px solid var(--husk);
+    }
+
+    .stage.has-data .stage-dot {
+      background: var(--paddy);
+      border-color: var(--paddy);
+    }
+
+    .stage-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      background: var(--parchment);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .stage-head:hover {
+      border-color: var(--husk);
+    }
+
+    .stage-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .stage-count {
+      font-size: 11px;
+      color: var(--soil);
+      opacity: .75;
+      margin-top: 2px;
+    }
+
+    .stage-chevron {
+      transition: transform .2s;
+      color: var(--soil);
+      font-size: 13px;
+      flex: none;
+    }
+
+    .stage.open .stage-chevron {
+      transform: rotate(180deg);
+    }
+
+    .stage-body {
+      display: none;
+      padding: 14px 4px 4px;
+    }
+
+    .stage.open .stage-body {
+      display: block;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .field-grid .kv .v {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+      word-break: break-word;
+    }
+
+    .record-row {
+      background: var(--parchment);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 12.5px;
+    }
+
+    .record-row .rk {
+      color: var(--soil);
+    }
+
+    .empty-note {
+      font-size: 12.5px;
+      color: var(--soil);
+      opacity: .8;
+      padding: 6px 2px;
+    }
+
+    footer.provenance {
+      padding: 20px;
+      background: var(--ink);
+      color: var(--husk-soft);
+    }
+
+    footer.provenance .batch {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12.5px;
+    }
+
+    footer.provenance .fine {
+      font-size: 11px;
+      opacity: .6;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .not-found,
+    .loading-msg {
+      padding: 60px 24px;
+      text-align: center;
+    }
+
+    .not-found h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+    }
+
+    .not-found p,
+    .loading-msg p {
+      font-size: 14px;
+      color: #665;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="app">
+    <div class="loading-msg"><img src="logo_name.png" alt="Mati Foods" style="height:32px;margin-bottom:14px;">
+      <p>Loading this batch's story…</p>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    (async function () {
+      const app = document.getElementById('app');
+      const params = new URLSearchParams(window.location.search);
+      const qrCode = params.get('qr') || params.get('batch');
+
+      if (!qrCode) {
+        app.innerHTML = `<div class="not-found"><h1>No QR code found</h1><p>Open this page by scanning a packet's QR code, or <a class="scan-link" href="index.html">scan one now</a>.</p></div>`;
+        return;
+      }
+
+      let data;
+      try {
+        const res = await fetch(`${window.API_BASE_URL}/api/trace/${encodeURIComponent(qrCode)}`);
+        if (res.status === 404) {
+          app.innerHTML = `<div class="not-found"><h1>We couldn't find that code</h1><p>This code may be unregistered, mistyped, or has been withdrawn. If you scanned this from a packet, please contact the retailer where you purchased it.</p></div>`;
+          return;
+        }
+        if (!res.ok) throw new Error('API error: ' + res.status);
+        data = await res.json();
+      } catch (err) {
+        app.innerHTML = `<div class="not-found"><h1>Couldn't load this batch right now</h1><p>There may be a connection issue. Please try scanning again in a moment.</p></div>`;
+        return;
+      }
+
+      const { packaging, farmer, plots = [], crop_cycles = [], inputs = [], activities = [],
+        pest_disease = [], irrigation = [], monitoring = [], sustainability = [],
+        harvest = [], processing = [], lab_testing = [], dispatch = [] } = data;
+      const fp = farmer || {};
+      const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+      const initials = (fp.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('');
+
+      const avatarHtml = fp.photo
+        ? `<img class="avatar" src="${fp.photo}" alt="${fp.name || 'Farmer'}">`
+        : `<div class="avatar-fallback">${initials}</div>`;
+
+      const certChips = (fp.certification ? [fp.certification] : []).map(c => `<span class="chip">${c}</span>`).join('');
+      const fpoChip = fp.fpo ? `<span class="chip">${fp.fpo}</span>` : '';
+      const icsChip = fp.ics_group ? `<span class="chip">${fp.ics_group}</span>` : '';
+
+      const section1 = `
     <section class="section">
       <h2>Farmer</h2>
       <div class="profile-card">
@@ -155,21 +525,21 @@
       </div>
     </section>`;
 
-  let plotTabsHtml = '';
-  if(plots.length > 1){
-    plotTabsHtml = `<div class="plot-tabs">` + plots.map((p,i) =>
-      `<div class="plot-tab ${i===0?'active':''}" data-plot-idx="${i}">Plot ${p.plot_id ?? i+1}</div>`
-    ).join('') + `</div>`;
-  }
+      let plotTabsHtml = '';
+      if (plots.length > 1) {
+        plotTabsHtml = `<div class="plot-tabs">` + plots.map((p, i) =>
+          `<div class="plot-tab ${i === 0 ? 'active' : ''}" data-plot-idx="${i}">Plot ${p.plot_id ?? i + 1}</div>`
+        ).join('') + `</div>`;
+      }
 
-  const hasAnyGeo = plots.some(p => p.centroid || p.geo_boundary);
-  const mapHtml = hasAnyGeo
-    ? `<div id="map"></div>`
-    : `<div class="map-empty">GPS location for this plot hasn't been recorded yet. Once field staff upload it, the boundary will appear here.</div>`;
+      const hasAnyGeo = plots.some(p => p.centroid || p.geo_boundary);
+      const mapHtml = hasAnyGeo
+        ? `<div id="map"></div>`
+        : `<div class="map-empty">GPS location for this plot hasn't been recorded yet. Once field staff upload it, the boundary will appear here.</div>`;
 
-  function plotDetailHtml(p){
-    if(!p) return '';
-    return `
+      function plotDetailHtml(p) {
+        if (!p) return '';
+        return `
       <div class="kv-list">
         <div class="kv"><div class="k">Area</div><div class="v">${p.area_acres ? p.area_acres + ' acres' : '—'}</div></div>
         <div class="kv"><div class="k">Soil type</div><div class="v">${p.soil_type || '—'}</div></div>
@@ -178,9 +548,9 @@
         <div class="kv"><div class="k">Survey no.</div><div class="v">${p.survey_no || '—'}</div></div>
         <div class="kv"><div class="k">Organic since</div><div class="v">${fmtDate(p.organic_since)}</div></div>
       </div>`;
-  }
+      }
 
-  const section2 = `
+      const section2 = `
     <section class="section">
       <h2>Farm plot</h2>
       <p class="section-sub">${plots.length > 1 ? plots.length + ' plots linked to this batch — tap to switch.' : 'Location and land details for this plot.'}</p>
@@ -189,85 +559,85 @@
       <div class="plot-detail" id="plotDetail">${plotDetailHtml(plots[0])}</div>
     </section>`;
 
-  // --- Interactive journey timeline -----------------------------------
-  function fieldGrid(obj, keys){
-    return `<div class="field-grid">` + keys.map(([label,val]) =>
-      `<div class="kv"><div class="k">${label}</div><div class="v">${val === null || val === undefined || val === '' ? '—' : val}</div></div>`
-    ).join('') + `</div>`;
-  }
-  function recordList(records, renderer){
-    if(!records.length) return `<p class="empty-note">No records logged yet for this stage.</p>`;
-    return records.map(r => `<div class="record-row">${renderer(r)}</div>`).join('');
-  }
-  const rk = (label, val) => `<span class="rk">${label}:</span> ${val === null || val === undefined || val === '' ? '—' : val} &nbsp; `;
+      // --- Interactive journey timeline -----------------------------------
+      function fieldGrid(obj, keys) {
+        return `<div class="field-grid">` + keys.map(([label, val]) =>
+          `<div class="kv"><div class="k">${label}</div><div class="v">${val === null || val === undefined || val === '' ? '—' : val}</div></div>`
+        ).join('') + `</div>`;
+      }
+      function recordList(records, renderer) {
+        if (!records.length) return `<p class="empty-note">No records logged yet for this stage.</p>`;
+        return records.map(r => `<div class="record-row">${renderer(r)}</div>`).join('');
+      }
+      const rk = (label, val) => `<span class="rk">${label}:</span> ${val === null || val === undefined || val === '' ? '—' : val} &nbsp; `;
 
-  const stages = [
-    {
-      title: 'Crop cycle', count: crop_cycles.length,
-      body: recordList(crop_cycles, c => rk('Crop', c.crop) + rk('Variety', c.variety) + rk('Season', c.season) +
-        rk('Sowing', fmtDate(c.sowing)) + rk('Flowering', fmtDate(c.flowering)) + rk('Harvest', fmtDate(c.harvest)))
-    },
-    {
-      title: 'Organic inputs used', count: inputs.length,
-      body: recordList(inputs, i => rk('Category', i.category) + rk('Product', i.product) + rk('Dose', i.dose ? i.dose + ' ' + (i.unit||'') : null) + rk('Applied', fmtDate(i.application_date)))
-    },
-    {
-      title: 'Field activity', count: activities.length,
-      body: recordList(activities, a => rk('Activity', a.activity) + rk('Description', a.description) + rk('Date', fmtDate(a.date)))
-    },
-    {
-      title: 'Growth monitoring', count: monitoring.length,
-      body: recordList(monitoring, m => rk('Week', m.week) + rk('Plant height', m.plant_height) + rk('NDVI', m.ndvi) + rk('Remarks', m.remarks))
-    },
-    {
-      title: 'Pest & disease watch', count: pest_disease.length,
-      body: recordList(pest_disease, p => rk('Pest', p.pest) + rk('Disease', p.disease) + rk('Severity', p.severity) + rk('Organic control', p.organic_control))
-    },
-    {
-      title: 'Irrigation', count: irrigation.length,
-      body: recordList(irrigation, i => rk('Method', i.method) + rk('Source', i.water_source) + rk('Quantity', i.quantity) + rk('Rainfall', i.rainfall))
-    },
-    {
-      title: 'Sustainability & carbon', count: sustainability.length,
-      body: recordList(sustainability, s => rk('CO2 removal', s.co2_removal) + rk('Water retention', s.water_retention) + rk('Biodiversity', s.biodiversity) + rk('Trees', s.trees))
-    },
-    {
-      title: 'Harvest', count: harvest.length,
-      body: recordList(harvest, h => rk('Date', fmtDate(h.date)) + rk('Yield', h.yield_kg ? h.yield_kg + ' kg' : null) + rk('Moisture', h.moisture) + rk('Method', h.harvest_method))
-    },
-    {
-      title: 'Processing', count: processing.length,
-      body: recordList(processing, p => rk('Milling', p.milling) + rk('Grading', p.grading) + rk('Recovery', p.recovery_pct ? (p.recovery_pct*100).toFixed(0)+'%' : null) + rk('Packed', fmtDate(p.packing_date)))
-    },
-    {
-      title: 'Lab testing', count: lab_testing.length,
-      body: recordList(lab_testing, l => rk('Protein', l.protein) + rk('Moisture', l.moisture) + rk('Heavy metals', l.heavy_metals) + rk('Pesticides', l.pesticides))
-    },
-    {
-      title: 'Packaging', count: packaging ? 1 : 0,
-      body: packaging ? fieldGrid(packaging, [['SKU', packaging.sku], ['Pack size', packaging.pack_size], ['Pack date', fmtDate(packaging.pack_date)], ['Expiry', fmtDate(packaging.expiry)], ['QR code', packaging.qr_code], ['Operator', packaging.operator]]) : `<p class="empty-note">No packaging record.</p>`
-    },
-    {
-      title: 'Dispatch', count: dispatch.length,
-      body: recordList(dispatch, d => rk('Buyer', d.buyer) + rk('Destination', d.destination) + rk('Vehicle', d.vehicle) + rk('Dispatched', fmtDate(d.dispatch_date)))
-    }
-  ];
+      const stages = [
+        {
+          title: 'Crop cycle', count: crop_cycles.length,
+          body: recordList(crop_cycles, c => rk('Crop', c.crop) + rk('Variety', c.variety) + rk('Season', c.season) +
+            rk('Sowing', fmtDate(c.sowing)) + rk('Flowering', fmtDate(c.flowering)) + rk('Harvest', fmtDate(c.harvest)))
+        },
+        {
+          title: 'Organic inputs used', count: inputs.length,
+          body: recordList(inputs, i => rk('Category', i.category) + rk('Product', i.product) + rk('Dose', i.dose ? i.dose + ' ' + (i.unit || '') : null) + rk('Applied', fmtDate(i.application_date)))
+        },
+        {
+          title: 'Field activity', count: activities.length,
+          body: recordList(activities, a => rk('Activity', a.activity) + rk('Description', a.description) + rk('Date', fmtDate(a.date)))
+        },
+        {
+          title: 'Growth monitoring', count: monitoring.length,
+          body: recordList(monitoring, m => rk('Week', m.week) + rk('Plant height', m.plant_height) + rk('NDVI', m.ndvi) + rk('Remarks', m.remarks))
+        },
+        {
+          title: 'Pest & disease watch', count: pest_disease.length,
+          body: recordList(pest_disease, p => rk('Pest', p.pest) + rk('Disease', p.disease) + rk('Severity', p.severity) + rk('Organic control', p.organic_control))
+        },
+        {
+          title: 'Irrigation', count: irrigation.length,
+          body: recordList(irrigation, i => rk('Method', i.method) + rk('Source', i.water_source) + rk('Quantity', i.quantity) + rk('Rainfall', i.rainfall))
+        },
+        {
+          title: 'Sustainability & carbon', count: sustainability.length,
+          body: recordList(sustainability, s => rk('CO2 removal', s.co2_removal) + rk('Water retention', s.water_retention) + rk('Biodiversity', s.biodiversity) + rk('Trees', s.trees))
+        },
+        {
+          title: 'Harvest', count: harvest.length,
+          body: recordList(harvest, h => rk('Date', fmtDate(h.date)) + rk('Yield', h.yield_kg ? h.yield_kg + ' kg' : null) + rk('Moisture', h.moisture) + rk('Method', h.harvest_method))
+        },
+        {
+          title: 'Processing', count: processing.length,
+          body: recordList(processing, p => rk('Milling', p.milling) + rk('Grading', p.grading) + rk('Recovery', p.recovery_pct ? (p.recovery_pct * 100).toFixed(0) + '%' : null) + rk('Packed', fmtDate(p.packing_date)))
+        },
+        {
+          title: 'Lab testing', count: lab_testing.length,
+          body: recordList(lab_testing, l => rk('Protein', l.protein) + rk('Moisture', l.moisture) + rk('Heavy metals', l.heavy_metals) + rk('Pesticides', l.pesticides))
+        },
+        {
+          title: 'Packaging', count: packaging ? 1 : 0,
+          body: packaging ? fieldGrid(packaging, [['SKU', packaging.sku], ['Pack size', packaging.pack_size], ['Pack date', fmtDate(packaging.pack_date)], ['Expiry', fmtDate(packaging.expiry)], ['QR code', packaging.qr_code], ['Operator', packaging.operator]]) : `<p class="empty-note">No packaging record.</p>`
+        },
+        {
+          title: 'Dispatch', count: dispatch.length,
+          body: recordList(dispatch, d => rk('Buyer', d.buyer) + rk('Destination', d.destination) + rk('Vehicle', d.vehicle) + rk('Dispatched', fmtDate(d.dispatch_date)))
+        }
+      ];
 
-  const doneCount = stages.filter(s => s.count > 0).length;
-  const progressHtml = `<div class="progress-rail">` + stages.map(s => `<div class="progress-dot ${s.count>0?'done':''}"></div>`).join('') + `</div>`;
+      const doneCount = stages.filter(s => s.count > 0).length;
+      const progressHtml = `<div class="progress-rail">` + stages.map(s => `<div class="progress-dot ${s.count > 0 ? 'done' : ''}"></div>`).join('') + `</div>`;
 
-  const timelineHtml = `
+      const timelineHtml = `
     <section class="section" style="border-bottom:none;">
       <h2>Field to pack, stage by stage</h2>
       <p class="section-sub">Tap any stage to see what was logged. ${doneCount} of ${stages.length} stages have records for this batch.</p>
       <div class="timeline">
         ${stages.map((s, i) => `
-          <div class="stage ${s.count>0?'has-data':''} ${i===0?'open':''}" data-stage-idx="${i}">
+          <div class="stage ${s.count > 0 ? 'has-data' : ''} ${i === 0 ? 'open' : ''}" data-stage-idx="${i}">
             <span class="stage-dot"></span>
             <div class="stage-head">
               <div>
                 <div class="stage-title">${s.title}</div>
-                <div class="stage-count">${s.count} record${s.count===1?'':'s'}</div>
+                <div class="stage-count">${s.count} record${s.count === 1 ? '' : 's'}</div>
               </div>
               <span class="stage-chevron">▾</span>
             </div>
@@ -276,9 +646,9 @@
       </div>
     </section>`;
 
-  app.innerHTML = `
+      app.innerHTML = `
     <div class="topbar">
-      <span class="brand"><img src="logo.png" alt="Mati Foods"><span class="brand-text"><span class="name">Mati Foods</span><span class="tagline">Farm-to-Fork Traceability</span></span></span>
+      <span class="brand"><img src="logo_name.png" alt="Mati Foods"></span>
       <a class="scan-link" href="index.html">Scan another</a>
     </div>
     <section class="hero">
@@ -295,45 +665,46 @@
     </footer>
   `;
 
-  document.querySelectorAll('.stage-head').forEach(head => {
-    head.addEventListener('click', () => head.closest('.stage').classList.toggle('open'));
-  });
-
-  if(hasAnyGeo && window.L){
-    const map = L.map('map', { zoomControl: false, attributionControl: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    const layers = [];
-
-    function drawPlot(idx){
-      layers.forEach(l => map.removeLayer(l));
-      layers.length = 0;
-      const p = plots[idx];
-      if(!p) return;
-      if(p.geo_boundary){
-        const layer = L.geoJSON(p.geo_boundary, { style: { color: '#3B6E4E', weight: 2, fillColor: '#C79A3D', fillOpacity: 0.25 } }).addTo(map);
-        layers.push(layer);
-        map.fitBounds(layer.getBounds(), { padding: [20,20] });
-      } else if(p.centroid && p.centroid.lat && p.centroid.lng){
-        const marker = L.marker([p.centroid.lat, p.centroid.lng]).addTo(map);
-        layers.push(marker);
-        map.setView([p.centroid.lat, p.centroid.lng], 15);
-      }
-    }
-
-    drawPlot(0);
-
-    document.querySelectorAll('.plot-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.plot-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        const idx = parseInt(tab.dataset.plotIdx, 10);
-        drawPlot(idx);
-        document.getElementById('plotDetail').innerHTML = plotDetailHtml(plots[idx]);
+      document.querySelectorAll('.stage-head').forEach(head => {
+        head.addEventListener('click', () => head.closest('.stage').classList.toggle('open'));
       });
-    });
-  }
-})();
-</script>
+
+      if (hasAnyGeo && window.L) {
+        const map = L.map('map', { zoomControl: false, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        const layers = [];
+
+        function drawPlot(idx) {
+          layers.forEach(l => map.removeLayer(l));
+          layers.length = 0;
+          const p = plots[idx];
+          if (!p) return;
+          if (p.geo_boundary) {
+            const layer = L.geoJSON(p.geo_boundary, { style: { color: '#3B6E4E', weight: 2, fillColor: '#C79A3D', fillOpacity: 0.25 } }).addTo(map);
+            layers.push(layer);
+            map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+          } else if (p.centroid && p.centroid.lat && p.centroid.lng) {
+            const marker = L.marker([p.centroid.lat, p.centroid.lng]).addTo(map);
+            layers.push(marker);
+            map.setView([p.centroid.lat, p.centroid.lng], 15);
+          }
+        }
+
+        drawPlot(0);
+
+        document.querySelectorAll('.plot-tab').forEach(tab => {
+          tab.addEventListener('click', () => {
+            document.querySelectorAll('.plot-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const idx = parseInt(tab.dataset.plotIdx, 10);
+            drawPlot(idx);
+            document.getElementById('plotDetail').innerHTML = plotDetailHtml(plots[idx]);
+          });
+        });
+      }
+    })();
+  </script>
 </body>
+
 </html>
