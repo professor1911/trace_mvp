@@ -545,7 +545,7 @@
           <div class="loc">${[fp.village, fp.district, fp.state].filter(Boolean).join(', ')}</div>
         </div>
       </div>
-      ${fp.story ? `<p class="profile-story">${fp.story}</p>` : ''}
+      ${fp.story ? `<p class="profile-story">${fp.story.split(/\n+/).map(p => p.trim()).filter(Boolean).join('<br><br>')}</p>` : ''}
       <div class="chip-row">${icsChip}${fpoChip}${certChips}</div>
       <div class="kv-list">
         <div class="kv"><div class="k">Experience</div><div class="v">${fp.experience_years ? Math.round(fp.experience_years) + ' years' : '—'}</div></div>
