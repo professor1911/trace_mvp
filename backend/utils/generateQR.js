@@ -16,9 +16,13 @@ if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
  */
 async function generateQRForBatch(qrCode) {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'https://your-site.netlify.app';
-  // Uses the clean /t/QR_CODE path (see netlify.toml redirect) rather than
-  // /trace.html?qr=... — shorter, and the query-string form still works too.
-  const url = `${FRONTEND_URL}/t/${encodeURIComponent(qrCode)}`;
+  // Encodes trace.html?qr=... directly rather than the shorter /t/QR_CODE
+  // path. Netlify's /t/* -> /trace.html?qr=:splat rule rewrites content at
+  // the edge but never touches the browser's actual address bar, so a phone
+  // scanning /t/QR-001-2026 would land on trace.html with an empty
+  // window.location.search and find no code. Baking the real query string
+  // into the QR itself sidesteps that entirely.
+  const url = `${FRONTEND_URL}/trace.html?qr=${encodeURIComponent(qrCode)}`;
 
   const fileName = `${qrCode}.png`;
   const filePath = path.join(OUTPUT_DIR, fileName);
