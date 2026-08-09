@@ -306,7 +306,7 @@
       padding: 2px 7px;
       border-radius: 100px;
       border: 1.5px solid #16241C;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 
     .map-empty {
@@ -675,7 +675,8 @@
     </div>
     <section class="hero">
       <p class="eyebrow">${packaging ? 'Batch ' + packaging.batch_id : ''} · ${packaging?.sku || ''}</p>
-      <h1>Field to pack — the full story of this rice</h1>
+      <h1>Farm-to-Fork Traceability</h1>
+      <h2>The full story of this Batch</h2>
     </section>
     ${progressHtml}
     ${section1}
@@ -701,7 +702,7 @@
 
         const layers = [];
 
-        function plotLabelIcon(label){
+        function plotLabelIcon(label) {
           return L.divIcon({
             className: 'plot-label-icon',
             html: `<span>${label}</span>`,
