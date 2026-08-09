@@ -288,6 +288,27 @@
       background: var(--parchment);
     }
 
+    /* Leaflet places this div's top-left corner at the marker's lat/lng
+       (no iconSize/iconAnchor given), so we center the whole badge on that
+       point ourselves rather than relying on Leaflet's own anchor math. */
+    .plot-label-icon {
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+    }
+
+    .plot-label-icon span {
+      display: inline-block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      font-size: 12px;
+      color: #16241C;
+      background: #FFD23F;
+      padding: 2px 7px;
+      border-radius: 100px;
+      border: 1.5px solid #16241C;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
     .map-empty {
       height: 220px;
       border-radius: 14px;
@@ -672,23 +693,41 @@
 
       if (hasAnyGeo && window.L) {
         const map = L.map('map', { zoomControl: false, attributionControl: false });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        // Esri World Imagery — free, no API key, satellite base to match a
+        // KMZ shapefile overlay (vs. the flat OSM street tiles used before).
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 19
+        }).addTo(map);
 
         const layers = [];
+
+        function plotLabelIcon(label){
+          return L.divIcon({
+            className: 'plot-label-icon',
+            html: `<span>${label}</span>`,
+            iconSize: null
+          });
+        }
 
         function drawPlot(idx) {
           layers.forEach(l => map.removeLayer(l));
           layers.length = 0;
           const p = plots[idx];
           if (!p) return;
+          const label = p.plot_id ?? idx + 1;
           if (p.geo_boundary) {
-            const layer = L.geoJSON(p.geo_boundary, { style: { color: '#3B6E4E', weight: 2, fillColor: '#C79A3D', fillOpacity: 0.25 } }).addTo(map);
+            // Bright outline + halo text so the plot number reads clearly
+            // against satellite imagery, for quick field verification.
+            const layer = L.geoJSON(p.geo_boundary, { style: { color: '#FFD23F', weight: 3, fillColor: '#C79A3D', fillOpacity: 0.2 } }).addTo(map);
             layers.push(layer);
+            const center = layer.getBounds().getCenter();
+            const labelMarker = L.marker(center, { icon: plotLabelIcon(label), interactive: false }).addTo(map);
+            layers.push(labelMarker);
             map.fitBounds(layer.getBounds(), { padding: [20, 20] });
           } else if (p.centroid && p.centroid.lat && p.centroid.lng) {
-            const marker = L.marker([p.centroid.lat, p.centroid.lng]).addTo(map);
+            const marker = L.marker([p.centroid.lat, p.centroid.lng], { icon: plotLabelIcon(label) }).addTo(map);
             layers.push(marker);
-            map.setView([p.centroid.lat, p.centroid.lng], 15);
+            map.setView([p.centroid.lat, p.centroid.lng], 16);
           }
         }
 
