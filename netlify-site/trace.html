@@ -680,7 +680,7 @@
       <a class="scan-link" href="index.html">Scan another</a>
     </div>
     <section class="hero">
-      <p class="eyebrow">${packaging ? 'Batch ' + packaging.batch_id : ''} · ${packaging?.sku || ''}</p>
+      <p class="eyebrow">${packaging ? packaging.batch_id : ''} &nbsp; · &nbsp; ${packaging?.sku || ''}</p>
       <h1>Farm-to-Fork Traceability</h1>
       <p>The full story of this Batch</p>
     </section>
@@ -689,8 +689,7 @@
     ${section2}
     ${timelineHtml}
     <footer class="provenance">
-      <div class="batch">QR ${qrCode} &nbsp;·&nbsp; PACKED ${fmtDate(packaging?.pack_date)} &nbsp;·&nbsp; BEST BEFORE ${fmtDate(packaging?.expiry)}</div>
-      <div class="fine">Personal contact numbers, age, gender, and banking details are never shown on this page. Report a concern to the retailer where this was purchased.</div>
+      <div class="batch">${qrCode} &nbsp;·&nbsp; PACKED ${fmtDate(packaging?.pack_date)} &nbsp;·&nbsp; BEST BEFORE ${fmtDate(packaging?.expiry)}</div>
     </footer>
   `;
 
