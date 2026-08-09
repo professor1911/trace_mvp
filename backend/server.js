@@ -25,7 +25,7 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/rice_trace
 mongoose.connect(MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
-    app.listen(PORT, () => console.log(`Rice Trace API listening on port ${PORT}`));
+    app.listen(PORT, () => console.log(`Mati Foods API listening on port ${PORT}`));
   })
   .catch(err => {
     console.error('MongoDB connection failed:', err.message);
