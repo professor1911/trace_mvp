@@ -450,6 +450,39 @@
       padding: 6px 2px;
     }
 
+    .thankyou-section {
+      padding: 28px 20px;
+      text-align: center;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .thankyou-icon {
+      font-size: 26px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .thankyou-section h2 {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 20px;
+      margin: 0 0 6px;
+      color: var(--paddy-deep);
+    }
+
+    .thankyou-section .thankyou-sub {
+      font-size: 13.5px;
+      color: var(--soil);
+      opacity: .85;
+      margin: 0 0 18px;
+    }
+
+    .thankyou-map {
+      width: 100%;
+      border-radius: 14px;
+      display: block;
+    }
+
     footer.provenance {
       padding: 20px;
       background: var(--ink);
@@ -688,6 +721,12 @@
     ${section1}
     ${section2}
     ${timelineHtml}
+    <section class="thankyou-section">
+      <div class="thankyou-icon">✨</div>
+      <h2>Thank you for the purchase</h2>
+      <p class="thankyou-sub">Your contribution to environment is highly appreciated</p>
+      <img class="thankyou-map" src="thank-you-map.png" alt="From this farmer's field to you">
+    </section>
     <footer class="provenance">
       <div class="batch">${qrCode} &nbsp;·&nbsp; PACKED ${fmtDate(packaging?.pack_date)} &nbsp;·&nbsp; BEST BEFORE ${fmtDate(packaging?.expiry)}</div>
     </footer>
